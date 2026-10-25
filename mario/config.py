@@ -77,8 +77,11 @@ REWARD_PIXEL = 0.01           # por cada píxel más lejos que nunca en el episo
 MAX_PIXELES_POR_PASO = 40     # un salto mayor en un paso es una lectura rara (cambio de zona): no se premia
 REWARD_PASO = -0.01           # cada paso cuesta: cuanto antes llegue, mejor
 REWARD_META = 50.0            # nivel completado...
-REWARD_META_RAPIDEZ = 50.0    # ...más hasta esto según lo rápido (lineal hasta FRAMES_REFERENCIA)
-FRAMES_REFERENCIA = 6000      # ~100 s de juego: tardar esto o más no da bonus de rapidez
+# Cuando ya llega casi siempre (97 % en el 1-1), lo que queda es recortar tiempo: con +50 repartidos en 6.000
+# fotogramas cada segundo ahorrado valía ~0,65 puntos (menos que el ruido entre partidas) y probar algo raro no
+# compensaba. Con +200 en 3.000 fotogramas vale ~4,1 puntos por segundo
+REWARD_META_RAPIDEZ = 200.0   # ...más hasta esto según lo rápido (lineal hasta FRAMES_REFERENCIA)
+FRAMES_REFERENCIA = 3000      # ~50 s de juego: tardar esto o más no da bonus de rapidez
 PENALTY_MUERTE = -10.0
 # Atascarse tiene que salir más caro que morir AUN DESCONTADO (llega al final, gamma^pasos): con -1 y 300 pasos la
 # IA se quedaba quieta ante las tuberías del 1-1, y con -10 seguía parada al borde del primer foso (84 % de atascos;

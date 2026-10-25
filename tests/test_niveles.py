@@ -43,3 +43,44 @@ class PrimerNivelPendienteTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class QuedarseTests(unittest.TestCase):
+    """Con --quedarse el nivel no cambia aunque esté agotado: se sigue exprimiendo."""
+
+    def callback(self, quedarse):
+        from mario.callbacks import NivelesCallback, ParadaCallback
+        with mock.patch("mario.callbacks.cargar_records", return_value={"1-1": {"frames": 1300}}):
+            cb = NivelesCallback((1, 1), ParadaCallback(), quedarse=quedarse)
+        cb.model = mock.Mock(num_timesteps=0)  # también da cb.logger y cb.training_env
+        cb.locals = {"infos": [{"motivo": "meta", "nivel": "1-1", "frames": 1400}] * 100}
+        cb.on_step()  # 100 metas sin récord
+        cb.model.num_timesteps = config.PASOS_SIN_MEJORA
+        cb.locals = {"infos": []}
+        return cb
+
+    def test_exhausted_level_moves_on_without_quedarse(self):
+        cb = self.callback(quedarse=False)
+        with mock.patch("mario.callbacks.states.asegurar", return_value=True), \
+                mock.patch("mario.callbacks.cargar_niveles", return_value={}),                 mock.patch("mario.callbacks.cargar_records", return_value={}), \
+                mock.patch("builtins.open", mock.mock_open()):
+            cb.on_step()
+        self.assertEqual(cb.nivel, (1, 2))
+
+    def test_exhausted_level_stays_with_quedarse(self):
+        cb = self.callback(quedarse=True)
+        self.assertTrue(cb.on_step())
+        self.assertEqual(cb.nivel, (1, 1))
+        cb.model.get_env.return_value.env_method.assert_not_called()
+
+
+class RecompensaMetaTests(unittest.TestCase):
+    def test_each_second_saved_near_the_current_record_is_worth_several_points(self):
+        from mario.env import recompensa_meta
+        fps = 59.73
+        diferencia = recompensa_meta(21 * fps) - recompensa_meta(22 * fps)
+        self.assertGreaterEqual(diferencia, 3)
+
+    def test_reaching_the_goal_always_pays_at_least_reward_meta(self):
+        from mario.env import recompensa_meta
+        self.assertEqual(recompensa_meta(10 * config.FRAMES_REFERENCIA), config.REWARD_META)

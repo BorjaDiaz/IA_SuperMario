@@ -21,8 +21,9 @@ class ParadaCallback(BaseCallback):
     """Para de forma ordenada si existe el archivo PARAR o se superan MAX_MINUTOS de entrenamiento
     activo (un hueco de más de 5 min entre comprobaciones es el PC suspendido: no cuenta)."""
 
-    def __init__(self):
+    def __init__(self, max_minutos=None):
         super().__init__()
+        self.max_minutos = config.MAX_MINUTOS if max_minutos is None else max_minutos
         self.motivo = None
         self.segundos = 0.0
         self.ultimo = None
@@ -39,8 +40,8 @@ class ParadaCallback(BaseCallback):
         self.ultimo = ahora
         if os.path.exists(config.STOP_FILE):
             self.motivo = "parado por el usuario (PARAR)"
-        elif config.MAX_MINUTOS and self.segundos > config.MAX_MINUTOS * 60:
-            self.motivo = f"tiempo máximo ({config.MAX_MINUTOS} min)"
+        elif self.max_minutos and self.segundos > self.max_minutos * 60:
+            self.motivo = f"tiempo máximo ({self.max_minutos} min)"
         if self.motivo:
             print(f"\n🛑 {self.motivo}: deteniendo el entrenamiento y guardando...")
             return False
@@ -88,11 +89,13 @@ def nivel_agotado(metas, pasos_sin_mejora):
 
 class NivelesCallback(BaseCallback):
     """Repite un nivel hasta agotarlo, lo apunta en niveles.json y sigue con el siguiente pendiente usando el
-    mismo modelo. Cuando no quedan niveles, para el entrenamiento."""
+    mismo modelo. Cuando no quedan niveles, para el entrenamiento. Con quedarse=True no pasa nunca al siguiente:
+    sigue exprimiendo el nivel mientras se quiera."""
 
-    def __init__(self, nivel, parada):
+    def __init__(self, nivel, parada, quedarse=False):
         super().__init__()
         self.parada = parada
+        self.quedarse = quedarse
         self.empezar(nivel)
 
     def empezar(self, nivel):
@@ -115,7 +118,7 @@ class NivelesCallback(BaseCallback):
                 self.mejor = info["frames"]
                 self.ultima_mejora = self.num_timesteps
         self.logger.record("mario/pasos_sin_mejora", self.num_timesteps - self.ultima_mejora)
-        if not nivel_agotado(self.metas, self.num_timesteps - self.ultima_mejora):
+        if self.quedarse or not nivel_agotado(self.metas, self.num_timesteps - self.ultima_mejora):
             return True
 
         agotados = cargar_niveles()

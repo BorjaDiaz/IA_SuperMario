@@ -3,6 +3,7 @@
 Uso (desde la carpeta "Super Mario"):
     .venv\\Scripts\\python.exe train.py              # primer nivel sin agotar (niveles.json)
     .venv\\Scripts\\python.exe train.py --nivel 2-1  # empezar por ese nivel
+    .venv\\Scripts\\python.exe train.py --quedarse --minutos 0  # exprimir el nivel actual, sin límite de tiempo
 Cada nivel se repite hasta agotarlo (ver PASOS_SIN_MEJORA en config.py) y luego sigue con el siguiente.
 Para pararla de forma ordenada, crea un archivo llamado PARAR en esta carpeta.
 """
@@ -41,6 +42,9 @@ def hiperparametros():
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--nivel", help="mundo-nivel por el que empezar, p. ej. 1-2")
+    parser.add_argument("--quedarse", action="store_true",
+                        help="no pasar al nivel siguiente aunque este esté agotado: exprimirlo al máximo")
+    parser.add_argument("--minutos", type=int, help=f"minutos de entrenamiento (0 = sin límite; por defecto {config.MAX_MINUTOS})")
     args = parser.parse_args()
     nivel = tuple(map(int, args.nivel.split("-"))) if args.nivel else primer_nivel_pendiente()
     if nivel is None:
@@ -69,11 +73,11 @@ def main():
             "pasos_al_empezar": int(model.num_timesteps),
             "config": {k: getattr(config, k) for k in dir(config) if k.isupper() and not k.endswith(("_DIR", "_PATH", "_FILE"))
                        and k not in ("MODELO", "ROM_PATH")}}
-    parada = ParadaCallback()
+    parada = ParadaCallback(args.minutos)
     checkpoint = CheckpointCallback(save_freq=max(1, config.CHECKPOINT_FREQ // config.NUM_CLONES),
                                     save_path=config.CHECKPOINTS_DIR, name_prefix="mario")
     try:
-        model.learn(total_timesteps=config.TOTAL_TIMESTEPS, callback=[checkpoint, EpisodiosCallback(), NivelesCallback(nivel, parada),
+        model.learn(total_timesteps=config.TOTAL_TIMESTEPS, callback=[checkpoint, EpisodiosCallback(), NivelesCallback(nivel, parada, args.quedarse),
                                                                     VideoRecordCallback(nivel), parada],
                     reset_num_timesteps=nuevo, tb_log_name="PPO")
     except KeyboardInterrupt:

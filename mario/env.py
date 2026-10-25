@@ -85,8 +85,7 @@ class MarioEnv(gym.Env):
         elif self.frame_meta is not None:
             motivo = "meta"
             self.frames = self.frame_meta
-            rapidez = max(0.0, 1 - self.frames / config.FRAMES_REFERENCIA)
-            reward += config.REWARD_META + config.REWARD_META_RAPIDEZ * rapidez
+            reward += recompensa_meta(self.frames)
             self._guardar_si_es_record()
         elif self.pasos_sin_avance >= config.MAX_PASOS_SIN_AVANCE:
             motivo = "atasco"
@@ -170,6 +169,12 @@ class MarioEnv(gym.Env):
         os.replace(tmp, config.RECORDS_PATH)
         antes = f" (antes {anterior / 59.73:.2f} s)" if anterior else ""
         print(f"🏆 [Clon {self.rank}] ¡Récord en el {nivel}! {self.frames / 59.73:.2f} s{antes}")
+
+
+def recompensa_meta(frames):
+    """Llegar da REWARD_META; llegar antes, hasta REWARD_META_RAPIDEZ más (lineal hasta FRAMES_REFERENCIA)."""
+    rapidez = max(0.0, 1 - frames / config.FRAMES_REFERENCIA)
+    return config.REWARD_META + config.REWARD_META_RAPIDEZ * rapidez
 
 
 def cargar_records():
