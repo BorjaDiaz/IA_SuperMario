@@ -80,9 +80,10 @@ REWARD_META = 50.0            # nivel completado...
 REWARD_META_RAPIDEZ = 50.0    # ...más hasta esto según lo rápido (lineal hasta FRAMES_REFERENCIA)
 FRAMES_REFERENCIA = 6000      # ~100 s de juego: tardar esto o más no da bonus de rapidez
 PENALTY_MUERTE = -10.0
-# Atascarse cuesta lo mismo que morir: con -1 y 300 pasos (-4 en total frente a -10) la IA aprendió a quedarse
-# quieta delante de las tuberías del 1-1 (81 % de atascos a los 12 min) en vez de arriesgarse a saltarlas
-PENALTY_ATASCO = -10.0
+# Atascarse tiene que salir más caro que morir AUN DESCONTADO (llega al final, gamma^pasos): con -1 y 300 pasos la
+# IA se quedaba quieta ante las tuberías del 1-1, y con -10 seguía parada al borde del primer foso (84 % de atascos;
+# -10 a 75 pasos pesa ~-6,9 frente a -10 de caer). -15 pesa ~-10,3: saltar ya no parece peor que esperar
+PENALTY_ATASCO = -15.0
 # El castigo del atasco llega al final y PPO lo descuenta (gamma^pasos): con 150 pasos y gamma 0,99 pesaba ~-2 desde
 # el borde del primer foso frente a -10 de caer, y la IA se quedaba parada (78 % de atascos en x≈1.000-1.100).
 # Con 75 pasos y gamma 0,995 pesa ~-6,9. No menos de ~5 s: hay niveles donde se espera a plataformas móviles
@@ -102,7 +103,7 @@ PPO_N_STEPS = 1024
 PPO_BATCH_SIZE = 512           # con 12 clones: 1.140 pasos/s frente a 1.020 con 256 (aprender 2,0 s frente a 3,3 s)
 PPO_N_EPOCHS = 4
 PPO_GAMMA = 0.995             # horizonte más largo: valora el atasco y la meta lejanos (ver MAX_PASOS_SIN_AVANCE)
-PPO_ENT_COEF = 0.01
+PPO_ENT_COEF = 0.03           # más exploración: con 0,01 la entropía bajó a 1,69 y dejó de probar a saltar el foso
 PPO_TARGET_KL = 0.03
 CHECKPOINT_FREQ = 500_000     # pasos totales entre copias de seguridad
 MAX_MINUTOS = 180             # de entrenamiento activo (sin contar suspensiones del PC)
