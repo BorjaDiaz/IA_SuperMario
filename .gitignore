@@ -7,3 +7,4 @@ records.json.*.tmp
 PARAR
 states/
 niveles.json
+.venv/

@@ -5,19 +5,27 @@ los 32 niveles del Super Mario Bros. de NES. La IA aprende a pasar un nivel en e
 Solo se le dice **qué** conseguir (avanzar y llegar a la meta cuanto antes), nunca **por dónde**: así
 cualquier atajo o truco que encuentre se premia solo.
 
-Usa el entorno de Python del proyecto de Pokémon (`..\Pokemon\.venv`). Desde esta carpeta:
+Tiene su propio entorno de Python en `.venv` (no se sube a git). Para crearlo, desde esta carpeta:
+
+```
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cu132
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Después, desde esta carpeta:
 
 | Qué | Comando |
 |---|---|
-| Crear el state del 1-1 y los de los niveles ya pasados | `..\Pokemon\.venv\Scripts\python.exe crear_states.py` |
-| Entrenar (continúa `ia/modelo.zip` si existe) | `..\Pokemon\.venv\Scripts\python.exe train.py [--nivel 1-2]` |
+| Crear el state del 1-1 y los de los niveles ya pasados | `.venv\Scripts\python.exe crear_states.py` |
+| Entrenar (continúa `ia/modelo.zip` si existe) | `.venv\Scripts\python.exe train.py [--nivel 1-2]` |
 | Parar de forma ordenada | crear un archivo `PARAR` en esta carpeta |
-| Resumen de la última ejecución | `..\Pokemon\.venv\Scripts\python.exe analisis.py` |
-| Ver jugar a la IA | `..\Pokemon\.venv\Scripts\python.exe ver_ia.py` |
-| Ver una partida guardada (p. ej. la del test, que llega al mástil del 1-1) | `..\Pokemon\.venv\Scripts\python.exe ver_ia.py --acciones tests\datos\meta_1-1.json` |
-| Repetir exactamente el récord | `..\Pokemon\.venv\Scripts\python.exe ver_ia.py --record --nivel 1-1` |
-| Tests | `..\Pokemon\.venv\Scripts\python.exe -m unittest discover -s tests -t .` |
-| TensorBoard | `..\Pokemon\.venv\Scripts\tensorboard.exe --logdir runs` |
+| Resumen de la última ejecución | `.venv\Scripts\python.exe analisis.py` |
+| Ver jugar a la IA | `.venv\Scripts\python.exe ver_ia.py` |
+| Ver una partida guardada (p. ej. la del test, que llega al mástil del 1-1) | `.venv\Scripts\python.exe ver_ia.py --acciones tests\datos\meta_1-1.json` |
+| Repetir exactamente el récord | `.venv\Scripts\python.exe ver_ia.py --record --nivel 1-1` |
+| Tests | `.venv\Scripts\python.exe -m unittest discover -s tests -t .` |
+| TensorBoard | `.venv\Scripts\tensorboard.exe --logdir runs` |
 
 - `mario/config.py`: niveles, acciones, recompensas y PPO.
 - Cada nivel empieza en `states/<mundo>-<nivel>.state`, conseguido jugando (`mario/states.py`): el del 1-1 desde

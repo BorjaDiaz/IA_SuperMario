@@ -136,7 +136,7 @@ class MarioEnv(gym.Env):
         self.pulsados = set()
 
     def _obs(self):
-        # Grises y media de cada bloque 2x2: 144x160 -> 72x80 (como en el proyecto de Pokémon)
+        # Grises y media de cada bloque 2x2: 144x160 -> 72x80
         rgb = self.pb.screen.ndarray[:, :, :3].astype(np.uint16)
         gris = (rgb[:, :, 0] * 77 + rgb[:, :, 1] * 150 + rgb[:, :, 2] * 29) >> 8
         gris = (gris[0::2, 0::2] + gris[1::2, 0::2] + gris[0::2, 1::2] + gris[1::2, 1::2]) >> 2

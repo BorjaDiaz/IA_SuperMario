@@ -1,8 +1,8 @@
 """Resumen de una ejecución del entrenamiento (por defecto, la más reciente).
 
 Uso (desde la carpeta "Super Mario"):
-    ..\\Pokemon\\.venv\\Scripts\\python.exe analisis.py
-    ..\\Pokemon\\.venv\\Scripts\\python.exe analisis.py --run 2026-10-25
+    .venv\\Scripts\\python.exe analisis.py
+    .venv\\Scripts\\python.exe analisis.py --run 2026-10-25
 Guarda runs/<id>/resumen.txt y runs/<id>/progreso.png.
 """
 import argparse

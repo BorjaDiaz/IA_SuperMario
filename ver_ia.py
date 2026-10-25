@@ -1,10 +1,10 @@
 """Ver a la IA jugar, o repetir exactamente la partida récord de un nivel (no entrena ni cambia nada).
 
 Uso (desde la carpeta "Super Mario"):
-    ..\\Pokemon\\.venv\\Scripts\\python.exe ver_ia.py --record        # repite el récord del nivel
-    ..\\Pokemon\\.venv\\Scripts\\python.exe ver_ia.py                 # juega el modelo entrenado
-    ..\\Pokemon\\.venv\\Scripts\\python.exe ver_ia.py --velocidad 3   # 3 veces más rápido
-    ..\\Pokemon\\.venv\\Scripts\\python.exe ver_ia.py --acciones tests\\datos\\meta_1-1.json  # cualquier partida
+    .venv\\Scripts\\python.exe ver_ia.py --record        # repite el récord del nivel
+    .venv\\Scripts\\python.exe ver_ia.py                 # juega el modelo entrenado
+    .venv\\Scripts\\python.exe ver_ia.py --velocidad 3   # 3 veces más rápido
+    .venv\\Scripts\\python.exe ver_ia.py --acciones tests\\datos\\meta_1-1.json  # cualquier partida
 """
 import argparse
 import json
