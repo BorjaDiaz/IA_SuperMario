@@ -136,3 +136,33 @@ class NivelesCallback(BaseCallback):
         self.training_env.env_method("cambiar_nivel", siguiente)
         self.empezar(siguiente)
         return True
+
+
+class VideoRecordCallback(BaseCallback):
+    """Cuando records.json cambia, graba en otro proceso (prioridad baja, de uno en uno) el vídeo del récord del
+    nivel que se entrena. Los clones no se paran: video.py repite las acciones del récord por su cuenta."""
+
+    def __init__(self, nivel):
+        super().__init__()
+        self.nivel = nivel
+        self.proceso = None
+        self.version_grabada = self._version()  # los récords previos ya tienen su vídeo (o se graban a mano)
+
+    def _version(self):
+        return os.path.getmtime(config.RECORDS_PATH) if os.path.exists(config.RECORDS_PATH) else None
+
+    def _on_step(self):
+        if self.n_calls % 200 or (self.proceso and self.proceso.poll() is None):
+            return True
+        version = self._version()
+        if version == self.version_grabada:
+            return True
+        import subprocess
+        import sys
+        self.version_grabada = version
+        prioridad_baja = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
+        self.proceso = subprocess.Popen(
+            [sys.executable, os.path.join(config.BASE_DIR, "video.py"), "--nivel", config.nombre_nivel(self.nivel)],
+            cwd=config.BASE_DIR, creationflags=prioridad_baja,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
