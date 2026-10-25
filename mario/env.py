@@ -47,8 +47,9 @@ class MarioEnv(gym.Env):
         self.episodio += 1
         self.pasos = self.frames = 0
         self.pasos_sin_avance = 0
-        self.vidas_inicio = self.juego.lives_left
+        self.vidas = self.juego.lives_left
         self.mundo_inicio = self.juego.world
+        self.frame_meta = None
         self.progreso_inicio = self.progreso_max = self.juego.level_progress
         self.progreso_anterior = self.progreso_max
         self.recompensa_total = 0.0
@@ -57,8 +58,11 @@ class MarioEnv(gym.Env):
 
     def step(self, action):
         self._pulsar(config.ACCIONES[action])
-        self.pb.tick(config.FRAMES_POR_ACCION - 1, False)
-        self.pb.tick(1, True)  # solo se dibuja el fotograma que se observa
+        # Fotograma a fotograma para saber en cuál exacto toca la meta; solo se dibuja el que se observa
+        for i in range(config.FRAMES_POR_ACCION):
+            self.pb.tick(1, i == config.FRAMES_POR_ACCION - 1)
+            if self.frame_meta is None and self.pb.memory[config.ADDR_ESTADO] == config.ESTADO_META:
+                self.frame_meta = self.frames + i + 1
         self.pasos += 1
         self.frames += config.FRAMES_POR_ACCION
         self.acciones.append(int(action))
@@ -77,15 +81,22 @@ class MarioEnv(gym.Env):
                 self.progreso_max = progreso
         self.progreso_anterior = progreso
 
+        # El estado del juego cambia en el fotograma de la meta o de la muerte. Las vidas y el mundo cambian
+        # cientos de fotogramas después (animación de muerte, recuento del tiempo): solo quedan de respaldo.
+        # La muerte va primero: tras un GAME OVER el título pone el mundo a 1-1 y parecería una meta
+        estado = self.pb.memory[config.ADDR_ESTADO]
+        vidas, self.vidas = self.vidas, self.juego.lives_left
         motivo = None
-        if self.juego.world != self.mundo_inicio:
+        if (estado in config.ESTADOS_MUERTE or estado in config.ESTADOS_GAME_OVER
+                or self.juego.lives_left < vidas or self.juego.game_over()):
+            motivo = "muerte"
+            reward += config.PENALTY_MUERTE
+        elif self.frame_meta is not None or self.juego.world != self.mundo_inicio:
             motivo = "meta"
+            self.frames = self.frame_meta or self.frames
             rapidez = max(0.0, 1 - self.frames / config.FRAMES_REFERENCIA)
             reward += config.REWARD_META + config.REWARD_META_RAPIDEZ * rapidez
             self._guardar_si_es_record()
-        elif self.juego.lives_left < self.vidas_inicio or self.juego.game_over():
-            motivo = "muerte"
-            reward += config.PENALTY_MUERTE
         elif self.pasos_sin_avance >= config.MAX_PASOS_SIN_AVANCE:
             motivo = "atasco"
             reward += config.PENALTY_ATASCO

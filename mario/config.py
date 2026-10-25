@@ -52,6 +52,13 @@ ACCIONES = [
     ("down",),                # agacharse / entrar en tuberías
 ]
 FRAMES_POR_ACCION = 4
+# Estado del juego (0xFFB3), medido en el emulador: 0 jugando (13 en submarino y avión), 7 toca la meta (luego
+# 5 recuento, 6, 8 nivel siguiente), 3 golpe (luego 4 animación, 1 caída), 1 directamente al caer a un foso o
+# quedar aplastado, 2 reaparecer, 57-58 GAME OVER y 14-15-17 vuelta al título (con el mundo puesto a 1-1)
+ADDR_ESTADO = 0xFFB3
+ESTADO_META = 7
+ESTADOS_MUERTE = (1, 3, 4)
+ESTADOS_GAME_OVER = (14, 15, 17, 57, 58)
 
 # ==========================================
 # RECOMPENSAS (speedrun: llegar a la meta en el menor número de fotogramas)

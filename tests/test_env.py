@@ -1,4 +1,5 @@
-"""Entorno de Mario con el emulador: avance, muerte y repetición exacta de una partida."""
+"""Entorno de Mario con el emulador: avance, muerte, meta y repetición exacta de una partida."""
+import json
 import os
 import random
 import tempfile
@@ -11,6 +12,9 @@ from mario import config
 from mario.env import MarioEnv
 
 DERECHA, SALTO_CORRIENDO = 1, 4
+# Acciones que llegan a la meta del 1-1 con timer_div=0 (encontradas con una búsqueda a lo bruto, no con la IA).
+# Toca la meta en el fotograma 2301; el mundo no cambia hasta el 2986, tras el recuento del tiempo
+META_1_1 = os.path.join(os.path.dirname(__file__), "datos", "meta_1-1.json")
 
 
 @unittest.skipUnless(os.path.exists(config.ROM_PATH) and os.path.isdir(config.STATES_DIR),
@@ -44,9 +48,20 @@ class MarioEnvTests(unittest.TestCase):
         self.assertAlmostEqual(sum(quieto), 20 * config.REWARD_PASO)
         self.assertGreater(sum(derecha), sum(quieto))
 
-    def test_walking_into_the_first_goomba_is_a_death(self):
+    def test_walking_into_the_first_goomba_is_a_death_at_the_hit(self):
+        # El golpe es en el fotograma 125 y termina al acabar ese paso; las vidas no bajan hasta el 336
         _, info, _ = self.jugar([DERECHA] * 2000, timer_div=0)
         self.assertEqual(info["motivo"], "muerte")
+        self.assertEqual(info["frames"], 128)
+
+    def test_goal_is_counted_at_the_frame_mario_touches_it(self):
+        with open(META_1_1, encoding="utf-8") as f:
+            acciones = json.load(f)
+        recompensas, info, _ = self.jugar(acciones, timer_div=0)
+        self.assertEqual(info["motivo"], "meta")
+        self.assertEqual(info["frames"], 2301)
+        self.assertEqual(len(recompensas), len(acciones))
+        self.assertGreater(recompensas[-1], config.REWARD_META)
 
     def test_each_level_starts_from_its_state(self):
         self.env.cambiar_nivel((2, 3))
