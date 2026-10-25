@@ -9,9 +9,10 @@ import os
 import sys
 import time
 
-# La carpeta de la ejecución se fija antes de importar config: los clones (procesos aparte) la heredan
-RUN_ID = time.strftime("%Y-%m-%d_%H%M%S")
-os.environ["MARIO_RUN_DIR"] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs", RUN_ID)
+# La carpeta de la ejecución se fija antes de importar config. En Windows cada clon vuelve a importar este
+# archivo al arrancar: setdefault hace que hereden la del proceso principal en vez de crear otra
+os.environ.setdefault("MARIO_RUN_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "runs",
+                                                    time.strftime("%Y-%m-%d_%H%M%S")))
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback
