@@ -86,12 +86,15 @@ MAX_PASOS_SIN_AVANCE = 300    # ~20 s de juego sin pasar de su marca: fin del ep
 # ==========================================
 # ENTRENAMIENTO (PPO)
 # ==========================================
-NUM_CLONES = 12
+# Todos los clones juegan el mismo state. Medido en un i5-11600KF (6 núcleos, 12 hilos): el emulador sube hasta
+# ~2.600 pasos/s con 10-12 clones y baja con 16 (se pisan en la CPU); cada clon ocupa ~250 MB de RAM. Un clon por
+# hilo es el máximo que acelera
+NUM_CLONES = os.cpu_count() or 12
 FRAME_STACK = 4               # ver la velocidad y la dirección de Mario y de los enemigos
 TOTAL_TIMESTEPS = 20_000_000
 PPO_LEARNING_RATE = 0.00025
 PPO_N_STEPS = 1024
-PPO_BATCH_SIZE = 256
+PPO_BATCH_SIZE = 512           # con 12 clones: 1.140 pasos/s frente a 1.020 con 256 (aprender 2,0 s frente a 3,3 s)
 PPO_N_EPOCHS = 4
 PPO_GAMMA = 0.99
 PPO_ENT_COEF = 0.01
