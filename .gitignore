@@ -1,0 +1,7 @@
+__pycache__/
+ia/
+runs/
+roms/
+records.json
+records.json.*.tmp
+PARAR
