@@ -71,6 +71,16 @@ class MarioEnvTests(unittest.TestCase):
         self.env.reset(timer_div=0)
         self.assertEqual(self.env.juego.world, (1, 1))
 
+    def test_the_plane_can_fly_up(self):
+        # Sin una acción con arriba, el 2-3 y el 4-3 no se pueden pasar
+        self.env.cambiar_nivel((4, 3))
+        self.env.reset(timer_div=0)
+        altura = self.env.pb.memory[0xC201]
+        for _ in range(10):
+            self.env.step(config.ACCIONES.index(("up",)))
+        self.assertLess(self.env.pb.memory[0xC201], altura)
+        self.env.cambiar_nivel((1, 1))
+
     def test_level_change_waits_for_the_next_reset(self):
         self.env.reset(timer_div=0)
         self.env.cambiar_nivel((1, 2))

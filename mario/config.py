@@ -50,6 +50,14 @@ ACCIONES = [
     ("left", "a"),
     ("a",),
     ("down",),                # agacharse / entrar en tuberías
+    # Submarino (2-3) y avión (4-3): arriba/abajo mueven a Mario y A/B disparan. Se añaden al final para no
+    # cambiar los índices de los récords ya guardados
+    ("up",),
+    ("right", "up"),
+    ("right", "down"),
+    ("right", "up", "a"),
+    ("right", "down", "a"),
+    ("left", "b"),            # correr hacia atrás
 ]
 FRAMES_POR_ACCION = 4
 # Estado del juego (0xFFB3), medido en el emulador: 0 jugando (13 en submarino y avión), 7 toca la meta (luego
