@@ -6,7 +6,7 @@ from collections import deque
 
 from stable_baselines3.common.callbacks import BaseCallback
 
-from mario import config
+from mario import config, states
 from mario.env import cargar_records
 
 
@@ -128,6 +128,9 @@ class NivelesCallback(BaseCallback):
         print(f"\n✅ {nombre} agotado: {segundos} s sin mejorar en {config.PASOS_SIN_MEJORA:,} pasos")
         if siguiente is None:
             self.parada.motivo = "todos los niveles agotados"
+            return False
+        if not states.asegurar(siguiente):
+            self.parada.motivo = f"no se pudo crear el state del {config.nombre_nivel(siguiente)}"
             return False
         print(f"➡️ Siguiente nivel: {config.nombre_nivel(siguiente)}")
         self.training_env.env_method("cambiar_nivel", siguiente)

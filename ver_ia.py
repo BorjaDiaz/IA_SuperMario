@@ -27,7 +27,7 @@ def repetir_record(env):
     if record["frames_por_accion"] != config.FRAMES_POR_ACCION:
         sys.exit("El récord se grabó con otro FRAMES_POR_ACCION: no se puede repetir igual.")
     print(f"▶️ Récord del {nivel}: {record['segundos']} s ({record['frames']} fotogramas, clon {record['clon']}, {record['run']})")
-    env.reset(timer_div=record["timer_div"])
+    env.reset()
     for accion in record["acciones"]:
         _, _, fin, _, info = env.step(accion)
     print(f"Resultado al repetirlo: {info.get('motivo')} en {env.frames / 59.73:.2f} s")

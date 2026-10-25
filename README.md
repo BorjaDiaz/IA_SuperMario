@@ -1,6 +1,7 @@
-# Speedrun de Super Mario Land con IA
+# Speedrun de Super Mario Bros. Deluxe con IA
 
-PPO (stable-baselines3) + PyBoy. La IA aprende a pasar un nivel en el menor número de fotogramas.
+PPO (stable-baselines3) + PyBoy, en el modo "Original 1985" de Super Mario Bros. Deluxe (Game Boy Color):
+los 32 niveles del Super Mario Bros. de NES. La IA aprende a pasar un nivel en el menor número de fotogramas.
 Solo se le dice **qué** conseguir (avanzar y llegar a la meta cuanto antes), nunca **por dónde**: así
 cualquier atajo o truco que encuentre se premia solo.
 
@@ -8,7 +9,7 @@ Usa el entorno de Python del proyecto de Pokémon (`..\Pokemon\.venv`). Desde es
 
 | Qué | Comando |
 |---|---|
-| Crear los states de los 12 niveles (una vez) | `..\Pokemon\.venv\Scripts\python.exe crear_states.py` |
+| Crear el state del 1-1 y los de los niveles ya pasados | `..\Pokemon\.venv\Scripts\python.exe crear_states.py` |
 | Entrenar (continúa `ia/modelo.zip` si existe) | `..\Pokemon\.venv\Scripts\python.exe train.py [--nivel 1-2]` |
 | Parar de forma ordenada | crear un archivo `PARAR` en esta carpeta |
 | Resumen de la última ejecución | `..\Pokemon\.venv\Scripts\python.exe analisis.py` |
@@ -18,10 +19,12 @@ Usa el entorno de Python del proyecto de Pokémon (`..\Pokemon\.venv`). Desde es
 | TensorBoard | `..\Pokemon\.venv\Scripts\tensorboard.exe --logdir runs` |
 
 - `mario/config.py`: niveles, acciones, recompensas y PPO.
-- Cada nivel empieza en `states/<mundo>-<nivel>.state`. `train.py` repite un nivel hasta agotarlo (llega a la
+- Cada nivel empieza en `states/<mundo>-<nivel>.state`, conseguido jugando (`mario/states.py`): el del 1-1 desde
+  los menús y el de cada nivel siguiente repitiendo el récord del anterior hasta el mástil. `train.py` repite un nivel hasta agotarlo (llega a la
   meta en el 80 % de los últimos 100 episodios y lleva `PASOS_SIN_MEJORA` pasos sin récord), lo apunta en
   `niveles.json` y sigue con el siguiente usando el mismo modelo. Al relanzarlo continúa por el primero pendiente.
-- `mario/env.py`: el entorno. Cada récord guarda en `records.json` sus acciones y la semilla del
-  temporizador; el emulador es determinista, así que `ver_ia.py --record` lo repite igual.
+- `mario/env.py`: el entorno. Lee de la RAM la X de Mario (avance) y su estado (5 = mástil, 3/17 = muerte), medidos
+  en el emulador y anotados en `config.py`. Cada récord guarda en `records.json` sus acciones; el emulador es
+  determinista y el azar del juego va en el state, así que `ver_ia.py --record` lo repite igual.
 - `runs/<fecha>/`: métricas por episodio, TensorBoard, `resumen.txt` y `progreso.png`.
-- La ROM va en `roms/Super Mario Land (World).gb` (no se sube a git).
+- La ROM va en `roms/Super Mario Bros. Deluxe (USA, Europe) (Rev A).gbc` (no se sube a git).

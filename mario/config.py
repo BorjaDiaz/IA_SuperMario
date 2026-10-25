@@ -2,7 +2,7 @@ import os
 
 # Carpeta del proyecto (mario/config.py -> dos niveles arriba)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ROM_PATH = os.path.join(BASE_DIR, "roms", "Super Mario Land (World).gb")
+ROM_PATH = os.path.join(BASE_DIR, "roms", "Super Mario Bros. Deluxe (USA, Europe) (Rev A).gbc")
 IA_DIR = os.path.join(BASE_DIR, "ia")
 MODELO = os.path.join(IA_DIR, "modelo.zip")
 CHECKPOINTS_DIR = os.path.join(IA_DIR, "checkpoints")
@@ -20,8 +20,10 @@ STOP_FILE = os.path.join(BASE_DIR, "PARAR")
 # ==========================================
 # JUEGO
 # ==========================================
-# Cada nivel es un speedrun aparte que empieza en su state (crear_states.py). Se entrenan en este orden
-NIVELES = [(m, n) for m in range(1, 5) for n in range(1, 4)]
+# Super Mario Bros. Deluxe (Game Boy Color), modo "Original 1985": los 32 niveles del Super Mario Bros. de NES.
+# Cada nivel es un speedrun aparte que empieza en su state. El del 1-1 sale de los menús; el de cada nivel
+# siguiente, de repetir la partida que pasa el anterior (mario/states.py): nunca se escribe en la RAM ni en la ROM
+NIVELES = [(m, n) for m in range(1, 9) for n in range(1, 5)]
 
 
 def nombre_nivel(nivel):
@@ -39,7 +41,7 @@ META_MINIMA = 0.8
 PASOS_SIN_MEJORA = 3_000_000
 # Acciones = combinaciones de botones mantenidas FRAMES_POR_ACCION fotogramas. Pocos fotogramas por
 # acción = control fino: saltos precisos y trucos de movimiento que un control grueso no permitiría.
-# El salto es más alto cuanto más se mantiene A; para volver a saltar hay que soltarlo (otra acción)
+# A salta (más alto cuanto más se mantiene; para volver a saltar hay que soltarlo) y B corre y lanza fuego
 ACCIONES = [
     (),                       # nada
     ("right",),
@@ -48,32 +50,30 @@ ACCIONES = [
     ("right", "a", "b"),      # salto largo corriendo
     ("left",),
     ("left", "a"),
-    ("a",),
-    ("down",),                # agacharse / entrar en tuberías
-    # Submarino (2-3) y avión (4-3): arriba/abajo mueven a Mario y A/B disparan. Se añaden al final para no
-    # cambiar los índices de los récords ya guardados
-    ("up",),
-    ("right", "up"),
-    ("right", "down"),
-    ("right", "up", "a"),
-    ("right", "down", "a"),
     ("left", "b"),            # correr hacia atrás
+    ("a",),
+    ("b",),                   # bola de fuego sin moverse
+    ("down",),                # agacharse / entrar en tuberías
+    ("up",),                  # trepar por las enredaderas
 ]
 FRAMES_POR_ACCION = 4
-# Estado del juego (0xFFB3), medido en el emulador: 0 jugando (13 en submarino y avión), 7 toca la meta (luego
-# 5 recuento, 6, 8 nivel siguiente), 3 golpe (luego 4 animación, 1 caída), 1 directamente al caer a un foso o
-# quedar aplastado, 2 reaparecer, 57-58 GAME OVER y 14-15-17 vuelta al título (con el mundo puesto a 1-1)
-ADDR_ESTADO = 0xFFB3
-ESTADO_META = 7
-ESTADOS_MUERTE = (1, 3, 4)
-ESTADOS_GAME_OVER = (14, 15, 17, 57, 58)
+# RAM medida en el emulador (capturas en cada cambio). X de Mario en el nivel = página * 256 + x
+ADDR_X_PAGINA = 0xC1CB
+ADDR_X = 0xC1CA
+ADDR_VIDAS = 0xC17F
+# Estado de Mario (0xC1C1): 0 en el suelo, 1 en el aire, 19 rebota al pisar a un enemigo, 16 entra andando
+# (inicio del 1-2), 5 se agarra al mástil (meta), 3 golpe mortal, 17 cae a un foso. La muerte y la meta se ven
+# en su fotograma exacto; las vidas bajan cientos de fotogramas después, ya en el mapa
+ADDR_ESTADO = 0xC1C1
+ESTADO_META = 5
+ESTADOS_MUERTE = (3, 17)
 
 # ==========================================
 # RECOMPENSAS (speedrun: llegar a la meta en el menor número de fotogramas)
 # ==========================================
 # Solo se indica QUÉ conseguir, nunca POR DÓNDE: así cualquier atajo o truco que lleve antes a la meta
 # se premia solo
-REWARD_PIXEL = 0.01           # por cada píxel más lejos que nunca en el episodio (1-1 ≈ 2.600 px ≈ +26)
+REWARD_PIXEL = 0.01           # por cada píxel más lejos que nunca en el episodio (mástil del 1-1 ≈ x 3.130 ≈ +31)
 MAX_PIXELES_POR_PASO = 40     # un salto mayor en un paso es una lectura rara (cambio de zona): no se premia
 REWARD_PASO = -0.01           # cada paso cuesta: cuanto antes llegue, mejor
 REWARD_META = 50.0            # nivel completado...

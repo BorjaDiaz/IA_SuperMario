@@ -1,11 +1,11 @@
-# Objetivos del speedrunner de Super Mario Land
+# Objetivos del speedrunner de Super Mario Bros. Deluxe
 
 Usa este texto como contexto al trabajar en este proyecto: define qué buscamos y qué no.
 
 ## Misión
-Entrenar con aprendizaje por refuerzo (PPO + PyBoy) una IA que pase cada nivel de **Super Mario Land
-(Game Boy)** en el **menor número de fotogramas posible**, y que descubra por sí misma rutas, movimientos
-o trucos que un jugador humano no usaría. El objetivo final es el juego completo (1-1 a 4-3) con el
+Entrenar con aprendizaje por refuerzo (PPO + PyBoy) una IA que pase cada nivel de **Super Mario Bros.
+Deluxe (Game Boy Color, modo Original 1985)** en el **menor número de fotogramas posible**, y que descubra por sí misma rutas, movimientos
+o trucos que un jugador humano no usaría. El objetivo final es el juego completo (1-1 a 8-4) con el
 mejor tiempo total.
 
 ## Qué cuenta como éxito, en orden
@@ -21,7 +21,7 @@ mejor tiempo total.
   hacerlo antes. Nada de coordenadas, rutas ni guías escritas a mano: impedirían que encuentre atajos.
 - **Control fino.** Acciones de pocos fotogramas (`FRAMES_POR_ACCION`) y combinaciones de botones: los
   trucos necesitan precisión.
-- **Partidas repetibles.** Todo récord guarda acciones y semilla del temporizador. Si un cambio rompe la
+- **Partidas repetibles.** Todo récord guarda sus acciones y empieza en un state conseguido jugando. Si un cambio rompe la
   repetición exacta, es un fallo.
 - **Las trampas de la recompensa no valen.** Si la IA saca puntos sin acercarse a la meta (quedarse
   quieta sin morir, ir y volver, aprovechar una lectura rara de la RAM), es un fallo nuestro: se corrige

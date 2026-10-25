@@ -1,8 +1,7 @@
-"""Entorno de Gymnasium para el speedrun de un nivel de Super Mario Land (PyBoy + su game wrapper)."""
+"""Entorno de Gymnasium para el speedrun de un nivel de Super Mario Bros. Deluxe (PyBoy, leyendo la RAM)."""
 import io
 import json
 import os
-import random
 import time
 
 import gymnasium as gym
@@ -19,10 +18,8 @@ class MarioEnv(gym.Env):
         self.rank = rank
         self.pb = PyBoy(config.ROM_PATH, window="SDL2" if ventana else "null", sound_emulated=False)
         self.pb.set_emulation_speed(velocidad)
-        self.juego = self.pb.game_wrapper
         self.nivel = None
         self.cambiar_nivel(nivel or config.NIVELES[0])
-        self.rng = random.Random(time.time_ns() + rank)
         self.action_space = spaces.Discrete(len(config.ACCIONES))
         self.observation_space = spaces.Box(0, 255, shape=(1, 72, 80), dtype=np.uint8)
         self.pulsados = set()
@@ -31,26 +28,21 @@ class MarioEnv(gym.Env):
         self.metricas_path = os.path.join(config.RUN_DIR, "metrics.jsonl")
 
     # ------------------------------------------------------------------ gym
-    def reset(self, seed=None, options=None, timer_div=None):
-        """timer_div: semilla del temporizador del juego (cambia el azar de enemigos). Al azar en cada
-        episodio para no memorizar una sola partida; se guarda con el récord para poder repetirlo."""
+    def reset(self, seed=None, options=None):
+        """Cada episodio empieza en el mismo fotograma: el azar del juego va dentro del state (cambiar el
+        temporizador DIV, como en Super Mario Land, no altera nada), así que un récord se repite con sus acciones."""
         super().reset(seed=seed)
-        self.timer_div = self.rng.randrange(256) if timer_div is None else timer_div
         if self.nivel_pendiente != self.nivel:
             self._cargar_state(self.nivel_pendiente)
         self._soltar_todo()
-        # Lo mismo que reset_game del wrapper, pero desde el state del nivel en vez del de start_game
         self.state.seek(0)
         self.pb.load_state(self.state)
-        self.juego._set_timer_div(self.timer_div)
-        self.juego.post_tick()
         self.episodio += 1
         self.pasos = self.frames = 0
         self.pasos_sin_avance = 0
-        self.vidas = self.juego.lives_left
-        self.mundo_inicio = self.juego.world
+        self.vidas = self.pb.memory[config.ADDR_VIDAS]
         self.frame_meta = None
-        self.progreso_inicio = self.progreso_max = self.juego.level_progress
+        self.progreso_inicio = self.progreso_max = self.x()
         self.progreso_anterior = self.progreso_max
         self.recompensa_total = 0.0
         self.acciones = []
@@ -69,7 +61,7 @@ class MarioEnv(gym.Env):
         reward = config.REWARD_PASO
 
         # Avance: solo cuenta pasar de la mejor marca del episodio (ir y volver no paga)
-        progreso = self.juego.level_progress
+        progreso = self.x()
         salto = progreso - self.progreso_anterior
         if progreso > self.progreso_max and 0 < salto <= config.MAX_PIXELES_POR_PASO:
             reward += config.REWARD_PIXEL * (progreso - self.progreso_max)
@@ -81,19 +73,17 @@ class MarioEnv(gym.Env):
                 self.progreso_max = progreso
         self.progreso_anterior = progreso
 
-        # El estado del juego cambia en el fotograma de la meta o de la muerte. Las vidas y el mundo cambian
-        # cientos de fotogramas después (animación de muerte, recuento del tiempo): solo quedan de respaldo.
-        # La muerte va primero: tras un GAME OVER el título pone el mundo a 1-1 y parecería una meta
+        # El estado de Mario cambia en el fotograma de la meta o de la muerte; las vidas bajan cientos de
+        # fotogramas después, ya en el mapa: solo quedan de respaldo
         estado = self.pb.memory[config.ADDR_ESTADO]
-        vidas, self.vidas = self.vidas, self.juego.lives_left
+        vidas, self.vidas = self.vidas, self.pb.memory[config.ADDR_VIDAS]
         motivo = None
-        if (estado in config.ESTADOS_MUERTE or estado in config.ESTADOS_GAME_OVER
-                or self.juego.lives_left < vidas or self.juego.game_over()):
+        if estado in config.ESTADOS_MUERTE or self.vidas < vidas:
             motivo = "muerte"
             reward += config.PENALTY_MUERTE
-        elif self.frame_meta is not None or self.juego.world != self.mundo_inicio:
+        elif self.frame_meta is not None:
             motivo = "meta"
-            self.frames = self.frame_meta or self.frames
+            self.frames = self.frame_meta
             rapidez = max(0.0, 1 - self.frames / config.FRAMES_REFERENCIA)
             reward += config.REWARD_META + config.REWARD_META_RAPIDEZ * rapidez
             self._guardar_si_es_record()
@@ -115,6 +105,10 @@ class MarioEnv(gym.Env):
         if not os.path.exists(config.state_path(nivel)):
             raise FileNotFoundError(f"Falta {config.state_path(nivel)}: ejecuta crear_states.py")
         self.nivel_pendiente = nivel
+
+    def x(self):
+        """Posición de Mario en el nivel, en píxeles."""
+        return self.pb.memory[config.ADDR_X_PAGINA] * 256 + self.pb.memory[config.ADDR_X]
 
     def close(self):
         self.pb.stop(save=False)
@@ -150,14 +144,14 @@ class MarioEnv(gym.Env):
     def _registrar_episodio(self, motivo):
         fila = {"rank": self.rank, "episodio": self.episodio, "motivo": motivo, "pasos": self.pasos,
                 "frames": self.frames, "progreso": self.progreso_max - self.progreso_inicio,
-                "recompensa": round(self.recompensa_total, 3), "timer_div": self.timer_div,
+                "recompensa": round(self.recompensa_total, 3),
                 "nivel": config.nombre_nivel(self.nivel), "timestamp": round(time.time(), 1)}
         with open(self.metricas_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(fila) + "\n")
 
     def _guardar_si_es_record(self):
-        """records.json guarda, por nivel, la partida más rápida: fotogramas, timer_div y la lista de
-        acciones. El emulador es determinista, así que ver_ia.py --record la repite exactamente."""
+        """records.json guarda, por nivel, la partida más rápida: fotogramas y la lista de acciones. El
+        emulador es determinista, así que ver_ia.py --record la repite exactamente."""
         if not config.GUARDAR_RECORDS:
             return
         nivel = config.nombre_nivel(self.nivel)
@@ -166,7 +160,7 @@ class MarioEnv(gym.Env):
         if anterior is not None and self.frames >= anterior:
             return
         records[nivel] = {"frames": self.frames, "segundos": round(self.frames / 59.73, 2),
-                          "timer_div": self.timer_div, "frames_por_accion": config.FRAMES_POR_ACCION,
+                          "frames_por_accion": config.FRAMES_POR_ACCION,
                           "acciones": self.acciones, "clon": self.rank,
                           "run": os.path.basename(config.RUN_DIR), "fecha": time.strftime("%Y-%m-%d %H:%M:%S")}
         tmp = f"{config.RECORDS_PATH}.{self.rank}.tmp"

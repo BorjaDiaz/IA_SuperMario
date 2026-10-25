@@ -1,4 +1,4 @@
-"""Entrena la IA del speedrun de Super Mario Land. Continúa ia/modelo.zip si existe.
+"""Entrena la IA del speedrun de Super Mario Bros. Deluxe. Continúa ia/modelo.zip si existe.
 
 Uso (desde la carpeta "Super Mario"):
     ..\\Pokemon\\.venv\\Scripts\\python.exe train.py              # primer nivel sin agotar (niveles.json)
@@ -22,7 +22,7 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecFrameStack
 
-from mario import config
+from mario import config, states
 from mario.callbacks import EpisodiosCallback, NivelesCallback, ParadaCallback, primer_nivel_pendiente, quitar_parar
 from mario.env import MarioEnv
 
@@ -46,6 +46,8 @@ def main():
         return print("Todos los niveles están agotados (niveles.json). Usa --nivel para repetir uno.")
     if nivel not in config.NIVELES:
         return print(f"Nivel desconocido: {args.nivel}")
+    if not states.asegurar(nivel):
+        return print(f"No hay state del {config.nombre_nivel(nivel)}: antes hay que pasar el nivel anterior")
     quitar_parar()
     os.makedirs(config.RUN_DIR, exist_ok=True)
     os.makedirs(config.CHECKPOINTS_DIR, exist_ok=True)
