@@ -49,6 +49,14 @@ class MarioEnvTests(unittest.TestCase):
         self.assertAlmostEqual(sum(quieto), 20 * config.REWARD_PASO)
         self.assertGreater(sum(derecha), sum(quieto))
 
+    def test_standing_still_is_never_cheaper_than_dying(self):
+        # Si quedarse quieto saliera más barato, la IA aprendería a esperar en vez de arriesgarse
+        quieto, info, _ = self.jugar([0] * 2000)
+        muerte, _, _ = self.jugar([DERECHA] * 2000)
+        self.assertEqual(info["motivo"], "atasco")
+        self.assertEqual(len(quieto), config.MAX_PASOS_SIN_AVANCE)
+        self.assertLessEqual(sum(quieto), sum(muerte))
+
     def test_walking_into_the_first_goomba_is_a_death_at_the_hit(self):
         # Termina en el paso del golpe; las vidas no bajan hasta volver al mapa, cientos de fotogramas después
         _, info, _ = self.jugar([DERECHA] * 2000)

@@ -80,8 +80,10 @@ REWARD_META = 50.0            # nivel completado...
 REWARD_META_RAPIDEZ = 50.0    # ...más hasta esto según lo rápido (lineal hasta FRAMES_REFERENCIA)
 FRAMES_REFERENCIA = 6000      # ~100 s de juego: tardar esto o más no da bonus de rapidez
 PENALTY_MUERTE = -10.0
-PENALTY_ATASCO = -1.0
-MAX_PASOS_SIN_AVANCE = 300    # ~20 s de juego sin pasar de su marca: fin del episodio
+# Atascarse cuesta lo mismo que morir: con -1 y 300 pasos (-4 en total frente a -10) la IA aprendió a quedarse
+# quieta delante de las tuberías del 1-1 (81 % de atascos a los 12 min) en vez de arriesgarse a saltarlas
+PENALTY_ATASCO = -10.0
+MAX_PASOS_SIN_AVANCE = 150    # ~10 s de juego sin pasar de su marca: fin del episodio
 
 # ==========================================
 # ENTRENAMIENTO (PPO)
