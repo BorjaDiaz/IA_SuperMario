@@ -83,7 +83,10 @@ PENALTY_MUERTE = -10.0
 # Atascarse cuesta lo mismo que morir: con -1 y 300 pasos (-4 en total frente a -10) la IA aprendió a quedarse
 # quieta delante de las tuberías del 1-1 (81 % de atascos a los 12 min) en vez de arriesgarse a saltarlas
 PENALTY_ATASCO = -10.0
-MAX_PASOS_SIN_AVANCE = 150    # ~10 s de juego sin pasar de su marca: fin del episodio
+# El castigo del atasco llega al final y PPO lo descuenta (gamma^pasos): con 150 pasos y gamma 0,99 pesaba ~-2 desde
+# el borde del primer foso frente a -10 de caer, y la IA se quedaba parada (78 % de atascos en x≈1.000-1.100).
+# Con 75 pasos y gamma 0,995 pesa ~-6,9. No menos de ~5 s: hay niveles donde se espera a plataformas móviles
+MAX_PASOS_SIN_AVANCE = 75     # ~5 s de juego sin pasar de su marca: fin del episodio
 
 # ==========================================
 # ENTRENAMIENTO (PPO)
@@ -98,7 +101,7 @@ PPO_LEARNING_RATE = 0.00025
 PPO_N_STEPS = 1024
 PPO_BATCH_SIZE = 512           # con 12 clones: 1.140 pasos/s frente a 1.020 con 256 (aprender 2,0 s frente a 3,3 s)
 PPO_N_EPOCHS = 4
-PPO_GAMMA = 0.99
+PPO_GAMMA = 0.995             # horizonte más largo: valora el atasco y la meta lejanos (ver MAX_PASOS_SIN_AVANCE)
 PPO_ENT_COEF = 0.01
 PPO_TARGET_KL = 0.03
 CHECKPOINT_FREQ = 500_000     # pasos totales entre copias de seguridad
