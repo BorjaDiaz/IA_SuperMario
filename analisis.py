@@ -25,18 +25,37 @@ def tendencia(valores):
     return float(np.mean(valores[:k])), float(np.mean(valores[-k:]))
 
 
+def archivos_de_metricas(run):
+    """metrics.jsonl (ejecuciones antiguas, todos los clones en un archivo) o metricas/clon_<n>.jsonl."""
+    return glob.glob(os.path.join(run, "metrics.jsonl")) + glob.glob(os.path.join(run, "metricas", "*.jsonl"))
+
+
+def leer_episodios(run):
+    """Se salta las líneas rotas: en metrics.jsonl los clones escribían a la vez y a veces se mezclaban."""
+    eps, rotas = [], 0
+    for ruta in archivos_de_metricas(run):
+        with open(ruta, encoding="utf-8") as f:
+            for l in f:
+                if not l.strip():
+                    continue
+                try:
+                    eps.append(json.loads(l))
+                except json.JSONDecodeError:
+                    rotas += 1
+    return sorted(eps, key=lambda r: r["timestamp"]), rotas
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--run", help="ejecución concreta (basta parte del nombre)")
     args = parser.parse_args()
-    runs = sorted(d for d in glob.glob(os.path.join(config.RUNS_DIR, "*")) if os.path.exists(os.path.join(d, "metrics.jsonl")))
+    runs = sorted(d for d in glob.glob(os.path.join(config.RUNS_DIR, "*")) if archivos_de_metricas(d))
     if args.run:
         runs = [d for d in runs if args.run in os.path.basename(d)]
     if not runs:
         raise SystemExit("No hay ejecuciones con datos.")
     run = runs[-1]
-    with open(os.path.join(run, "metrics.jsonl"), encoding="utf-8") as f:
-        eps = sorted((json.loads(l) for l in f if l.strip()), key=lambda r: r["timestamp"])
+    eps, rotas = leer_episodios(run)
 
     L = [f"RESUMEN DE LA EJECUCIÓN {os.path.basename(run)}", "=" * 60]
     if os.path.exists(os.path.join(run, "run.json")):
@@ -46,7 +65,8 @@ def main():
         if "motivo_fin" in info:
             L.append(f"Motivo de fin: {info['motivo_fin']} · pasos {info['pasos_al_empezar']:,} → {info['pasos_al_terminar']:,}")
     motivos = Counter(r["motivo"] for r in eps)
-    L.append(f"\nEPISODIOS: {len(eps)} · " + " · ".join(f"{m} {100 * n / len(eps):.0f}%" for m, n in motivos.most_common()))
+    L.append(f"\nEPISODIOS: {len(eps)} · " + " · ".join(f"{m} {100 * n / len(eps):.0f}%" for m, n in motivos.most_common())
+             + (f" · {rotas} líneas ilegibles ignoradas" if rotas else ""))
     p0, p1 = tendencia([r["progreso"] for r in eps])
     L.append(f"  Avance medio (píxeles): primer 20% {p0:.0f} → último 20% {p1:.0f} · máximo {max(r['progreso'] for r in eps)}")
     m0, m1 = tendencia([r["motivo"] == "meta" for r in eps])

@@ -24,8 +24,9 @@ class MarioEnv(gym.Env):
         self.observation_space = spaces.Box(0, 255, shape=(1, 72, 80), dtype=np.uint8)
         self.pulsados = set()
         self.episodio = 0
-        os.makedirs(config.RUN_DIR, exist_ok=True)
-        self.metricas_path = os.path.join(config.RUN_DIR, "metrics.jsonl")
+        # Un archivo por clon: escribiendo todos en el mismo, a veces se mezclaban líneas
+        os.makedirs(os.path.join(config.RUN_DIR, "metricas"), exist_ok=True)
+        self.metricas_path = os.path.join(config.RUN_DIR, "metricas", f"clon_{rank}.jsonl")
 
     # ------------------------------------------------------------------ gym
     def reset(self, seed=None, options=None):
