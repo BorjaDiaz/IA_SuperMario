@@ -4,8 +4,10 @@ Uso (desde la carpeta "Super Mario"):
     ..\\Pokemon\\.venv\\Scripts\\python.exe ver_ia.py --record        # repite el récord del nivel
     ..\\Pokemon\\.venv\\Scripts\\python.exe ver_ia.py                 # juega el modelo entrenado
     ..\\Pokemon\\.venv\\Scripts\\python.exe ver_ia.py --velocidad 3   # 3 veces más rápido
+    ..\\Pokemon\\.venv\\Scripts\\python.exe ver_ia.py --acciones tests\\datos\\meta_1-1.json  # cualquier partida
 """
 import argparse
+import json
 import os
 import sys
 import tempfile
@@ -27,14 +29,24 @@ def repetir_record(env):
     if record["frames_por_accion"] != config.FRAMES_POR_ACCION:
         sys.exit("El récord se grabó con otro FRAMES_POR_ACCION: no se puede repetir igual.")
     print(f"▶️ Récord del {nivel}: {record['segundos']} s ({record['frames']} fotogramas, clon {record['clon']}, {record['run']})")
+    repetir(env, record["acciones"])
+
+
+def repetir(env, acciones):
     env.reset()
-    for accion in record["acciones"]:
+    info = {}
+    for accion in acciones:
         _, _, fin, _, info = env.step(accion)
+        if fin:
+            break
     print(f"Resultado al repetirlo: {info.get('motivo')} en {env.frames / 59.73:.2f} s")
+    env.pb.tick(180, True)  # 3 s más para ver el final
 
 
 def jugar_modelo(env, episodios, determinista):
     from stable_baselines3 import PPO
+    if not os.path.exists(config.MODELO):
+        sys.exit("Aún no hay modelo entrenado (ia/modelo.zip). Prueba con --acciones o --record.")
     model = PPO.load(config.MODELO, device="cpu")
     pila = np.zeros((config.FRAME_STACK, 72, 80), dtype=np.uint8)
     for _ in range(episodios):
@@ -53,6 +65,7 @@ def jugar_modelo(env, episodios, determinista):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--record", action="store_true", help="repetir la partida récord del nivel")
+    parser.add_argument("--acciones", help="archivo JSON con una lista de acciones a repetir")
     parser.add_argument("--velocidad", type=int, default=1, help="1 = tiempo real, 0 = sin límite")
     parser.add_argument("--episodios", type=int, default=5)
     parser.add_argument("--nivel", default="1-1", help="mundo-nivel, p. ej. 1-2")
@@ -61,7 +74,13 @@ def main():
     env = MarioEnv(rank=100, ventana=True, velocidad=args.velocidad,
                    nivel=tuple(map(int, args.nivel.split("-"))))
     try:
-        repetir_record(env) if args.record else jugar_modelo(env, args.episodios, args.determinista)
+        if args.acciones:
+            with open(args.acciones, encoding="utf-8") as f:
+                repetir(env, json.load(f))
+        elif args.record:
+            repetir_record(env)
+        else:
+            jugar_modelo(env, args.episodios, args.determinista)
     finally:
         env.close()
 

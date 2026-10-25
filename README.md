@@ -14,6 +14,7 @@ Usa el entorno de Python del proyecto de Pokémon (`..\Pokemon\.venv`). Desde es
 | Parar de forma ordenada | crear un archivo `PARAR` en esta carpeta |
 | Resumen de la última ejecución | `..\Pokemon\.venv\Scripts\python.exe analisis.py` |
 | Ver jugar a la IA | `..\Pokemon\.venv\Scripts\python.exe ver_ia.py` |
+| Ver una partida guardada (p. ej. la del test, que llega al mástil del 1-1) | `..\Pokemon\.venv\Scripts\python.exe ver_ia.py --acciones tests\datos\meta_1-1.json` |
 | Repetir exactamente el récord | `..\Pokemon\.venv\Scripts\python.exe ver_ia.py --record --nivel 1-1` |
 | Tests | `..\Pokemon\.venv\Scripts\python.exe -m unittest discover -s tests -t .` |
 | TensorBoard | `..\Pokemon\.venv\Scripts\tensorboard.exe --logdir runs` |
