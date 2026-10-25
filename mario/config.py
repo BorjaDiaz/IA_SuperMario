@@ -8,6 +8,9 @@ MODELO = os.path.join(IA_DIR, "modelo.zip")
 CHECKPOINTS_DIR = os.path.join(IA_DIR, "checkpoints")
 RUNS_DIR = os.path.join(BASE_DIR, "runs")
 RECORDS_PATH = os.path.join(BASE_DIR, "records.json")
+STATES_DIR = os.path.join(BASE_DIR, "states")
+# Qué niveles se dan por agotados (sin bajar más el tiempo); train.py sigue por el primero pendiente
+NIVELES_PATH = os.path.join(BASE_DIR, "niveles.json")
 # Carpeta de la ejecución en curso (la fija train.py para los clones, que van en procesos aparte)
 RUN_DIR = os.environ.get("MARIO_RUN_DIR", os.path.join(BASE_DIR, "runs", "pruebas"))
 # MARIO_SIN_RECORDS=1: no escribe records.json (pruebas, ver_ia.py). Solo el entrenamiento debe cambiarlo
@@ -17,7 +20,23 @@ STOP_FILE = os.path.join(BASE_DIR, "PARAR")
 # ==========================================
 # JUEGO
 # ==========================================
-NIVEL = (1, 1)            # (mundo, nivel) que se entrena; cada nivel es un speedrun aparte
+# Cada nivel es un speedrun aparte que empieza en su state (crear_states.py). Se entrenan en este orden
+NIVELES = [(m, n) for m in range(1, 5) for n in range(1, 4)]
+
+
+def nombre_nivel(nivel):
+    return "-".join(map(str, nivel))
+
+
+def state_path(nivel):
+    return os.path.join(STATES_DIR, f"{nombre_nivel(nivel)}.state")
+
+
+# Un nivel se da por agotado (imposible bajar más el tiempo con lo aprendido) cuando llega a la meta en al
+# menos META_MINIMA de los últimos 100 episodios y lleva PASOS_SIN_MEJORA pasos sin récord. Entonces se pasa al
+# siguiente con el mismo modelo
+META_MINIMA = 0.8
+PASOS_SIN_MEJORA = 3_000_000
 # Acciones = combinaciones de botones mantenidas FRAMES_POR_ACCION fotogramas. Pocos fotogramas por
 # acción = control fino: saltos precisos y trucos de movimiento que un control grueso no permitiría.
 # El salto es más alto cuanto más se mantiene A; para volver a saltar hay que soltarlo (otra acción)

@@ -1,4 +1,5 @@
 """Entorno de Gymnasium para el speedrun de un nivel de Super Mario Land (PyBoy + su game wrapper)."""
+import io
 import json
 import os
 import random
@@ -13,13 +14,14 @@ from mario import config
 
 
 class MarioEnv(gym.Env):
-    def __init__(self, rank=0, ventana=False, velocidad=0):
+    def __init__(self, rank=0, ventana=False, velocidad=0, nivel=None):
         super().__init__()
         self.rank = rank
         self.pb = PyBoy(config.ROM_PATH, window="SDL2" if ventana else "null", sound_emulated=False)
         self.pb.set_emulation_speed(velocidad)
         self.juego = self.pb.game_wrapper
-        self.juego.start_game(timer_div=0, world_level=config.NIVEL)
+        self.nivel = None
+        self.cambiar_nivel(nivel or config.NIVELES[0])
         self.rng = random.Random(time.time_ns() + rank)
         self.action_space = spaces.Discrete(len(config.ACCIONES))
         self.observation_space = spaces.Box(0, 255, shape=(1, 72, 80), dtype=np.uint8)
@@ -34,8 +36,14 @@ class MarioEnv(gym.Env):
         episodio para no memorizar una sola partida; se guarda con el récord para poder repetirlo."""
         super().reset(seed=seed)
         self.timer_div = self.rng.randrange(256) if timer_div is None else timer_div
+        if self.nivel_pendiente != self.nivel:
+            self._cargar_state(self.nivel_pendiente)
         self._soltar_todo()
-        self.juego.reset_game(timer_div=self.timer_div)
+        # Lo mismo que reset_game del wrapper, pero desde el state del nivel en vez del de start_game
+        self.state.seek(0)
+        self.pb.load_state(self.state)
+        self.juego._set_timer_div(self.timer_div)
+        self.juego.post_tick()
         self.episodio += 1
         self.pasos = self.frames = 0
         self.pasos_sin_avance = 0
@@ -85,14 +93,28 @@ class MarioEnv(gym.Env):
         self.recompensa_total += reward
         info = {}
         if motivo:
-            info = {"motivo": motivo, "frames": self.frames, "progreso": self.progreso_max - self.progreso_inicio}
+            info = {"motivo": motivo, "nivel": config.nombre_nivel(self.nivel), "frames": self.frames,
+                    "progreso": self.progreso_max - self.progreso_inicio}
             self._registrar_episodio(motivo)
         return self._obs(), reward, motivo is not None, False, info
+
+    def cambiar_nivel(self, nivel):
+        """El nivel cambia en el siguiente reset: el episodio en curso termina en el suyo."""
+        nivel = tuple(nivel)
+        if not os.path.exists(config.state_path(nivel)):
+            raise FileNotFoundError(f"Falta {config.state_path(nivel)}: ejecuta crear_states.py")
+        self.nivel_pendiente = nivel
 
     def close(self):
         self.pb.stop(save=False)
 
     # ------------------------------------------------------------ interno
+    def _cargar_state(self, nivel):
+        """El primer fotograma jugable del nivel (crear_states.py), con la ROM sin tocar."""
+        with open(config.state_path(nivel), "rb") as f:
+            self.state = io.BytesIO(f.read())
+        self.nivel = nivel
+
     def _pulsar(self, botones):
         """Mantiene pulsados exactamente esos botones (suelta los demás)."""
         deseados = set(botones)
@@ -118,7 +140,7 @@ class MarioEnv(gym.Env):
         fila = {"rank": self.rank, "episodio": self.episodio, "motivo": motivo, "pasos": self.pasos,
                 "frames": self.frames, "progreso": self.progreso_max - self.progreso_inicio,
                 "recompensa": round(self.recompensa_total, 3), "timer_div": self.timer_div,
-                "nivel": "-".join(map(str, config.NIVEL)), "timestamp": round(time.time(), 1)}
+                "nivel": config.nombre_nivel(self.nivel), "timestamp": round(time.time(), 1)}
         with open(self.metricas_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(fila) + "\n")
 
@@ -127,7 +149,7 @@ class MarioEnv(gym.Env):
         acciones. El emulador es determinista, así que ver_ia.py --record la repite exactamente."""
         if not config.GUARDAR_RECORDS:
             return
-        nivel = "-".join(map(str, config.NIVEL))
+        nivel = config.nombre_nivel(self.nivel)
         records = cargar_records()
         anterior = records.get(nivel, {}).get("frames")
         if anterior is not None and self.frames >= anterior:

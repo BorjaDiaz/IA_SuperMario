@@ -1,9 +1,12 @@
 """Entrena la IA del speedrun de Super Mario Land. Continúa ia/modelo.zip si existe.
 
 Uso (desde la carpeta "Super Mario"):
-    ..\\Pokemon\\.venv\\Scripts\\python.exe train.py
+    ..\\Pokemon\\.venv\\Scripts\\python.exe train.py              # primer nivel sin agotar (niveles.json)
+    ..\\Pokemon\\.venv\\Scripts\\python.exe train.py --nivel 2-1  # empezar por ese nivel
+Cada nivel se repite hasta agotarlo (ver PASOS_SIN_MEJORA en config.py) y luego sigue con el siguiente.
 Para pararla de forma ordenada, crea un archivo llamado PARAR en esta carpeta.
 """
+import argparse
 import json
 import os
 import sys
@@ -20,12 +23,12 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecFrameStack
 
 from mario import config
-from mario.callbacks import EpisodiosCallback, ParadaCallback, quitar_parar
+from mario.callbacks import EpisodiosCallback, NivelesCallback, ParadaCallback, primer_nivel_pendiente, quitar_parar
 from mario.env import MarioEnv
 
 
-def crear_clon(rank):
-    return lambda: Monitor(MarioEnv(rank=rank))
+def crear_clon(rank, nivel):
+    return lambda: Monitor(MarioEnv(rank=rank, nivel=nivel))
 
 
 def hiperparametros():
@@ -35,10 +38,18 @@ def hiperparametros():
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--nivel", help="mundo-nivel por el que empezar, p. ej. 1-2")
+    args = parser.parse_args()
+    nivel = tuple(map(int, args.nivel.split("-"))) if args.nivel else primer_nivel_pendiente()
+    if nivel is None:
+        return print("Todos los niveles están agotados (niveles.json). Usa --nivel para repetir uno.")
+    if nivel not in config.NIVELES:
+        return print(f"Nivel desconocido: {args.nivel}")
     quitar_parar()
     os.makedirs(config.RUN_DIR, exist_ok=True)
     os.makedirs(config.CHECKPOINTS_DIR, exist_ok=True)
-    env = VecFrameStack(SubprocVecEnv([crear_clon(i) for i in range(config.NUM_CLONES)]),
+    env = VecFrameStack(SubprocVecEnv([crear_clon(i, nivel) for i in range(config.NUM_CLONES)]),
                         n_stack=config.FRAME_STACK, channels_order="first")
     tb = os.path.join(config.RUN_DIR, "tensorboard")
     if os.path.exists(config.MODELO):
@@ -49,9 +60,9 @@ def main():
         print("👶 Creando un modelo desde cero...")
         model = PPO("CnnPolicy", env, verbose=1, tensorboard_log=tb, **hiperparametros())
         nuevo = True
-    print(f"🖥️ Entrenando en: {model.device} · nivel {config.NIVEL} · {config.NUM_CLONES} clones")
+    print(f"🖥️ Entrenando en: {model.device} · nivel {config.nombre_nivel(nivel)} · {config.NUM_CLONES} clones")
 
-    info = {"inicio": time.strftime("%Y-%m-%d %H:%M:%S"), "nivel": config.NIVEL, "modelo": "nuevo" if nuevo else "continuado",
+    info = {"inicio": time.strftime("%Y-%m-%d %H:%M:%S"), "nivel": config.nombre_nivel(nivel), "modelo": "nuevo" if nuevo else "continuado",
             "pasos_al_empezar": int(model.num_timesteps),
             "config": {k: getattr(config, k) for k in dir(config) if k.isupper() and not k.endswith(("_DIR", "_PATH", "_FILE"))
                        and k not in ("MODELO", "ROM_PATH")}}
@@ -59,7 +70,7 @@ def main():
     checkpoint = CheckpointCallback(save_freq=max(1, config.CHECKPOINT_FREQ // config.NUM_CLONES),
                                     save_path=config.CHECKPOINTS_DIR, name_prefix="mario")
     try:
-        model.learn(total_timesteps=config.TOTAL_TIMESTEPS, callback=[checkpoint, EpisodiosCallback(), parada],
+        model.learn(total_timesteps=config.TOTAL_TIMESTEPS, callback=[checkpoint, EpisodiosCallback(), NivelesCallback(nivel, parada), parada],
                     reset_num_timesteps=nuevo, tb_log_name="PPO")
     except KeyboardInterrupt:
         parada.motivo = "interrumpido (Ctrl+C)"

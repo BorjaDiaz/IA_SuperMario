@@ -20,7 +20,7 @@ from mario.env import MarioEnv, cargar_records
 
 
 def repetir_record(env):
-    nivel = "-".join(map(str, config.NIVEL))
+    nivel = config.nombre_nivel(env.nivel_pendiente)
     record = cargar_records().get(nivel)
     if not record:
         sys.exit(f"Aún no hay récord en el {nivel}.")
@@ -55,9 +55,11 @@ def main():
     parser.add_argument("--record", action="store_true", help="repetir la partida récord del nivel")
     parser.add_argument("--velocidad", type=int, default=1, help="1 = tiempo real, 0 = sin límite")
     parser.add_argument("--episodios", type=int, default=5)
+    parser.add_argument("--nivel", default="1-1", help="mundo-nivel, p. ej. 1-2")
     parser.add_argument("--determinista", action="store_true", help="siempre la acción más probable")
     args = parser.parse_args()
-    env = MarioEnv(rank=100, ventana=True, velocidad=args.velocidad)
+    env = MarioEnv(rank=100, ventana=True, velocidad=args.velocidad,
+                   nivel=tuple(map(int, args.nivel.split("-"))))
     try:
         repetir_record(env) if args.record else jugar_modelo(env, args.episodios, args.determinista)
     finally:

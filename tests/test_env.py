@@ -13,7 +13,8 @@ from mario.env import MarioEnv
 DERECHA, SALTO_CORRIENDO = 1, 4
 
 
-@unittest.skipUnless(os.path.exists(config.ROM_PATH), "ROM no disponible")
+@unittest.skipUnless(os.path.exists(config.ROM_PATH) and os.path.isdir(config.STATES_DIR),
+                     "ROM o states no disponibles (crear_states.py)")
 class MarioEnvTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -46,6 +47,23 @@ class MarioEnvTests(unittest.TestCase):
     def test_walking_into_the_first_goomba_is_a_death(self):
         _, info, _ = self.jugar([DERECHA] * 2000, timer_div=0)
         self.assertEqual(info["motivo"], "muerte")
+
+    def test_each_level_starts_from_its_state(self):
+        self.env.cambiar_nivel((2, 3))
+        self.env.reset(timer_div=0)
+        self.assertEqual(self.env.juego.world, (2, 3))
+        self.env.cambiar_nivel((1, 1))
+        self.env.reset(timer_div=0)
+        self.assertEqual(self.env.juego.world, (1, 1))
+
+    def test_level_change_waits_for_the_next_reset(self):
+        self.env.reset(timer_div=0)
+        self.env.cambiar_nivel((1, 2))
+        self.env.step(DERECHA)
+        self.assertEqual(self.env.juego.world, (1, 1))
+        self.env.reset(timer_div=0)
+        self.assertEqual(self.env.juego.world, (1, 2))
+        self.env.cambiar_nivel((1, 1))
 
     def test_same_actions_and_timer_give_the_same_game(self):
         # ver_ia.py --record se basa en esto: el emulador es determinista
