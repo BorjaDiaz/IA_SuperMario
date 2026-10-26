@@ -23,7 +23,7 @@ def main():
         siguiente = config.NIVELES[config.NIVELES.index(nivel) + 1]
         if os.path.exists(config.state_path(siguiente)):
             continue
-        if states.crear_siguiente(nivel, record["acciones"]) is None:
+        if states.crear_siguiente(nivel, record["botones"], record["frames_por_accion"]) is None:
             raise SystemExit(f"El récord del {config.nombre_nivel(nivel)} ya no llega a la meta")
         print(f"✅ {config.nombre_nivel(siguiente)} repitiendo el récord del {config.nombre_nivel(nivel)}")
     print("States:", ", ".join(sorted(f[:-6] for f in os.listdir(config.STATES_DIR) if f.endswith(".state"))))

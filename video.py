@@ -31,8 +31,6 @@ def grabar(nivel):
     record = cargar_records().get(nombre)
     if not record:
         sys.exit(f"Aún no hay récord en el {nombre}.")
-    if record["frames_por_accion"] != config.FRAMES_POR_ACCION:
-        sys.exit("El récord se grabó con otro FRAMES_POR_ACCION: no se puede repetir igual.")
     os.makedirs(VIDEOS_DIR, exist_ok=True)
     ruta = os.path.join(VIDEOS_DIR, f"{nombre}_{record['segundos']:.2f}s.mp4")
     tmp = ruta + ".tmp.mp4"
@@ -45,9 +43,9 @@ def grabar(nivel):
             def fotograma():
                 imagen = np.asarray(env.pb.screen.image.convert("RGB"))
                 video.append_data(imagen.repeat(ESCALA, axis=0).repeat(ESCALA, axis=1))
-            for accion in record["acciones"]:
-                env._pulsar(config.ACCIONES[accion])
-                for _ in range(config.FRAMES_POR_ACCION):
+            for botones in record["botones"]:
+                env._pulsar(botones)
+                for _ in range(record["frames_por_accion"]):
                     env.pb.tick(1, True)
                     fotogramas += 1
                     fotograma()

@@ -55,19 +55,14 @@ def crear_primero():
         pb.stop(save=False)
 
 
-def crear_siguiente(nivel, acciones):
-    """Repite `acciones` (una partida que pasa `nivel`) y guarda el state del nivel que viene después.
+def crear_siguiente(nivel, botones, frames_por_accion):
+    """Repite `botones` (una partida que pasa `nivel`) y guarda el state del nivel que viene después.
     Devuelve ese nivel, o None si la partida no llega a la meta."""
     from mario.env import MarioEnv  # evita la importación circular (env no depende de este módulo)
     siguiente = config.NIVELES[config.NIVELES.index(tuple(nivel)) + 1]
     env = MarioEnv(rank=98, nivel=nivel)
     try:
-        env.reset()
-        info = {}
-        for a in acciones:
-            _, _, fin, _, info = env.step(a)
-            if fin:
-                break
+        info = env.repetir(botones, frames_por_accion)
         if info.get("motivo") != "meta":
             return None
         env._soltar_todo()
@@ -91,4 +86,4 @@ def asegurar(nivel):
     anterior = config.NIVELES[i - 1]
     record = cargar_records().get(config.nombre_nivel(anterior))
     return bool(record) and os.path.exists(config.state_path(anterior)) \
-        and crear_siguiente(anterior, record["acciones"]) == tuple(nivel)
+        and crear_siguiente(anterior, record["botones"], record["frames_por_accion"]) == tuple(nivel)

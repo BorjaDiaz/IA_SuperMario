@@ -26,19 +26,12 @@ def repetir_record(env):
     record = cargar_records().get(nivel)
     if not record:
         sys.exit(f"Aún no hay récord en el {nivel}.")
-    if record["frames_por_accion"] != config.FRAMES_POR_ACCION:
-        sys.exit("El récord se grabó con otro FRAMES_POR_ACCION: no se puede repetir igual.")
     print(f"▶️ Récord del {nivel}: {record['segundos']} s ({record['frames']} fotogramas, clon {record['clon']}, {record['run']})")
-    repetir(env, record["acciones"])
+    repetir(env, record["botones"], record["frames_por_accion"])
 
 
-def repetir(env, acciones):
-    env.reset()
-    info = {}
-    for accion in acciones:
-        _, _, fin, _, info = env.step(accion)
-        if fin:
-            break
+def repetir(env, botones, frames_por_accion=None):
+    info = env.repetir(botones, frames_por_accion)
     print(f"Resultado al repetirlo: {info.get('motivo')} en {env.frames / 59.73:.2f} s")
     env.pb.tick(180, True)  # 3 s más para ver el final
 
@@ -65,7 +58,8 @@ def jugar_modelo(env, episodios, determinista):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--record", action="store_true", help="repetir la partida récord del nivel")
-    parser.add_argument("--acciones", help="archivo JSON con una lista de acciones a repetir")
+    parser.add_argument("--acciones", help="archivo JSON con los botones de cada paso (como en records.json)")
+    parser.add_argument("--frames-por-accion", type=int, default=4, help="con --acciones: fotogramas de cada paso")
     parser.add_argument("--velocidad", type=int, default=1, help="1 = tiempo real, 0 = sin límite")
     parser.add_argument("--episodios", type=int, default=5)
     parser.add_argument("--nivel", default="1-1", help="mundo-nivel, p. ej. 1-2")
@@ -76,7 +70,7 @@ def main():
     try:
         if args.acciones:
             with open(args.acciones, encoding="utf-8") as f:
-                repetir(env, json.load(f))
+                repetir(env, json.load(f), args.frames_por_accion)
         elif args.record:
             repetir_record(env)
         else:

@@ -50,15 +50,22 @@ class MarioEnv(gym.Env):
         return self._obs(), {}
 
     def step(self, action):
-        self._pulsar(config.ACCIONES[action])
+        return self.paso(config.ACCIONES[action])
+
+    def paso(self, botones, frames_por_accion=None):
+        """Mantiene `botones` frames_por_accion fotogramas. step() lo usa con las acciones de la IA; las
+        repeticiones de récords, con los botones y los fotogramas por acción con que se grabaron."""
+        frames_por_accion = frames_por_accion or config.FRAMES_POR_ACCION
+        self.frames_por_accion = frames_por_accion
+        self._pulsar(botones)
         # Fotograma a fotograma para saber en cuál exacto toca la meta; solo se dibuja el que se observa
-        for i in range(config.FRAMES_POR_ACCION):
-            self.pb.tick(1, i == config.FRAMES_POR_ACCION - 1)
+        for i in range(frames_por_accion):
+            self.pb.tick(1, i == frames_por_accion - 1)
             if self.frame_meta is None and self.pb.memory[config.ADDR_ESTADO] == config.ESTADO_META:
                 self.frame_meta = self.frames + i + 1
         self.pasos += 1
-        self.frames += config.FRAMES_POR_ACCION
-        self.acciones.append(int(action))
+        self.frames += frames_por_accion
+        self.acciones.append(list(botones))
         reward = config.REWARD_PASO
 
         # Avance: solo cuenta pasar de la mejor marca del episodio (ir y volver no paga)
@@ -98,6 +105,16 @@ class MarioEnv(gym.Env):
                     "progreso": self.progreso_max - self.progreso_inicio}
             self._registrar_episodio(motivo)
         return self._obs(), reward, motivo is not None, False, info
+
+    def repetir(self, botones, frames_por_accion):
+        """Juega una partida guardada (p. ej. un récord) desde el inicio del nivel. Devuelve el info final."""
+        self.reset()
+        info = {}
+        for b in botones:
+            _, _, fin, _, info = self.paso(b, frames_por_accion)
+            if fin:
+                break
+        return info
 
     def cambiar_nivel(self, nivel):
         """El nivel cambia en el siguiente reset: el episodio en curso termina en el suyo."""
@@ -150,8 +167,9 @@ class MarioEnv(gym.Env):
             f.write(json.dumps(fila) + "\n")
 
     def _guardar_si_es_record(self):
-        """records.json guarda, por nivel, la partida más rápida: fotogramas y la lista de acciones. El
-        emulador es determinista, así que ver_ia.py --record la repite exactamente."""
+        """records.json guarda, por nivel, la partida más rápida: fotogramas y los botones de cada paso (no el
+        número de acción, para que siga valiendo si cambia la lista de ACCIONES). El emulador es determinista,
+        así que ver_ia.py --record la repite exactamente."""
         if not config.GUARDAR_RECORDS:
             return
         nivel = config.nombre_nivel(self.nivel)
@@ -160,8 +178,8 @@ class MarioEnv(gym.Env):
         if anterior is not None and self.frames >= anterior:
             return
         records[nivel] = {"frames": self.frames, "segundos": round(self.frames / 59.73, 2),
-                          "frames_por_accion": config.FRAMES_POR_ACCION,
-                          "acciones": self.acciones, "clon": self.rank,
+                          "frames_por_accion": self.frames_por_accion,
+                          "botones": self.acciones, "clon": self.rank,
                           "run": os.path.basename(config.RUN_DIR), "fecha": time.strftime("%Y-%m-%d %H:%M:%S")}
         tmp = f"{config.RECORDS_PATH}.{self.rank}.tmp"
         with open(tmp, "w", encoding="utf-8") as f:
