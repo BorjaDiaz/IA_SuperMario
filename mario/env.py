@@ -22,6 +22,7 @@ class MarioEnv(gym.Env):
         self.rank = rank
         self.practica = practica
         self.puntos_practica = deque(maxlen=config.PRACTICA_MAX)
+        self.frames_tipicos = config.FRAMES_REFERENCIA // 2  # hasta dónde se reparten los puntos (última meta)
         self.rng = random.Random(time.time_ns() + rank)
         self.pb = PyBoy(config.ROM_PATH, window="SDL2" if ventana else "null", sound_emulated=False)
         self.pb.set_emulation_speed(velocidad)
@@ -58,7 +59,8 @@ class MarioEnv(gym.Env):
         self.pasos = 0
         self.frames = punto[1] if punto else 0  # el tiempo cuenta desde el inicio real del nivel
         self.candidatos_practica = []
-        self.proximo_punto = self.frames + config.PRACTICA_CADA_FRAMES
+        # Un punto por partida, en un fotograma al azar hasta donde suele llegar a la meta
+        self.proximo_punto = self.frames + self.rng.randint(60, max(120, self.frames_tipicos - self.frames))
         self.pasos_sin_avance = 0
         self.vidas = self.pb.memory[config.ADDR_VIDAS]
         self.frame_meta = None
@@ -89,7 +91,7 @@ class MarioEnv(gym.Env):
             guardado = io.BytesIO()
             self.pb.save_state(guardado)
             self.candidatos_practica.append((guardado.getvalue(), self.frames, tuple(self.pulsados)))
-            self.proximo_punto += config.PRACTICA_CADA_FRAMES
+            self.proximo_punto = float("inf")
         reward = config.REWARD_PASO
 
         # Avance: solo cuenta pasar de la mejor marca del episodio (ir y volver no paga)
@@ -118,6 +120,7 @@ class MarioEnv(gym.Env):
             self.frames = self.frame_meta
             reward += recompensa_meta(self.frames)
             self.puntos_practica.extend(self.candidatos_practica)  # solo puntos de partidas que llegan
+            self.frames_tipicos = self.frames
             if not self.es_practica:
                 self._guardar_si_es_record()
         elif self.pasos_sin_avance >= config.MAX_PASOS_SIN_AVANCE:
@@ -172,6 +175,7 @@ class MarioEnv(gym.Env):
         record = cargar_records().get(config.nombre_nivel(self.nivel))
         if not record:
             return
+        self.frames_tipicos = record["frames"]
         self.state.seek(0)
         self.pb.load_state(self.state)
         frames, proximo = 0, config.PRACTICA_CADA_FRAMES

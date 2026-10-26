@@ -101,12 +101,14 @@ PENALTY_ATASCO = -15.0
 MAX_FRAMES_SIN_AVANCE = 300   # ~5 s de juego sin pasar de su marca: fin del episodio
 MAX_PASOS_SIN_AVANCE = MAX_FRAMES_SIN_AVANCE // FRAMES_POR_ACCION
 
-# Práctica: cada clon guarda un state cada PRACTICA_CADA_FRAMES de sus partidas que llegan a la meta y, en
+# Práctica: cada clon guarda un state en un fotograma al azar de cada partida (si llega a la meta, se queda) y, en
 # PRACTICA_PROB de los episodios, empieza desde uno de ellos en vez de desde el principio. Así repite más los tramos
 # donde se ganan décimas. No le dice por dónde ir (son puntos de sus propias partidas); el tiempo cuenta desde el
 # inicio real del nivel y estos episodios nunca dan récords
 PRACTICA_PROB = 0.25
-PRACTICA_CADA_FRAMES = 120    # un punto cada ~2 s de juego
+PRACTICA_CADA_FRAMES = 120    # al sembrar con el récord: un punto cada ~2 s de juego
+# Guardar un state en PyBoy cuesta ~35 ms: con un punto cada 2 s en todas las partidas un clon iba a la mitad de
+# velocidad (434 frente a 915 pasos/s). Con uno por partida, en un fotograma al azar, la lista se llena igual
 PRACTICA_MAX = 60             # puntos guardados por clon (los más recientes: de sus partidas más rápidas)
 
 # ==========================================

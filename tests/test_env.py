@@ -108,9 +108,10 @@ class PracticaTests(unittest.TestCase):
         try:
             env.reset()
             self.assertFalse(env.es_practica)  # aún no hay puntos
+            env.rng.randint = lambda a, b: 600  # el punto de esta partida: hacia el fotograma 600
             info = env.repetir(self.acciones, 4)
             self.assertEqual(info["motivo"], "meta")
-            self.assertEqual(len(env.puntos_practica), 1418 // config.PRACTICA_CADA_FRAMES)
+            self.assertEqual([p[1] for p in env.puntos_practica], [600])  # uno por partida
             env.reset()
             self.assertTrue(env.es_practica)
             self.assertGreater(env.frames, 0)  # el tiempo sigue contando desde el inicio real del nivel
@@ -119,7 +120,7 @@ class PracticaTests(unittest.TestCase):
             env.close()
 
     def test_practice_starts_with_points_from_the_level_record(self):
-        self.records.return_value = {"1-1": {"botones": self.acciones, "frames_por_accion": 4}}
+        self.records.return_value = {"1-1": {"botones": self.acciones, "frames_por_accion": 4, "frames": 1418}}
         env = MarioEnv(rank=99, practica=True)
         try:
             env.reset()
@@ -140,8 +141,8 @@ class PracticaTests(unittest.TestCase):
     def test_a_practice_game_keeps_the_real_time_and_never_sets_a_record(self):
         env = MarioEnv(rank=99, practica=True)
         try:
+            env.rng.randint = lambda a, b: 1320  # el punto de la partida: fotograma 1320 = paso 330
             env.repetir(self.acciones, 4)
-            env.rng.choice = lambda puntos: puntos[-1]  # el punto más avanzado: fotograma 1320 = paso 330
             env.reset()
             self.assertEqual(env.frames, 1320)
             with mock.patch.object(env, "_guardar_si_es_record") as guardar:
