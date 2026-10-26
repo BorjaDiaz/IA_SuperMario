@@ -30,7 +30,7 @@ from mario.env import MarioEnv
 
 
 def crear_clon(rank, nivel):
-    return lambda: Monitor(MarioEnv(rank=rank, nivel=nivel))
+    return lambda: Monitor(MarioEnv(rank=rank, nivel=nivel, practica=True))
 
 
 def hiperparametros():

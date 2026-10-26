@@ -56,6 +56,8 @@ def main():
         raise SystemExit("No hay ejecuciones con datos.")
     run = runs[-1]
     eps, rotas = leer_episodios(run)
+    practica = sum(1 for r in eps if r.get("practica"))
+    eps = [r for r in eps if not r.get("practica")]  # las de práctica empiezan a medio nivel
 
     L = [f"RESUMEN DE LA EJECUCIÓN {os.path.basename(run)}", "=" * 60]
     if os.path.exists(os.path.join(run, "run.json")):
@@ -66,7 +68,8 @@ def main():
             L.append(f"Motivo de fin: {info['motivo_fin']} · pasos {info['pasos_al_empezar']:,} → {info['pasos_al_terminar']:,}")
     motivos = Counter(r["motivo"] for r in eps)
     L.append(f"\nEPISODIOS: {len(eps)} · " + " · ".join(f"{m} {100 * n / len(eps):.0f}%" for m, n in motivos.most_common())
-             + (f" · {rotas} líneas ilegibles ignoradas" if rotas else ""))
+             + (f" · {rotas} líneas ilegibles ignoradas" if rotas else "")
+             + (f" · aparte, {practica} de práctica" if practica else ""))
     p0, p1 = tendencia([r["progreso"] for r in eps])
     L.append(f"  Avance medio (píxeles): primer 20% {p0:.0f} → último 20% {p1:.0f} · máximo {max(r['progreso'] for r in eps)}")
     m0, m1 = tendencia([r["motivo"] == "meta" for r in eps])

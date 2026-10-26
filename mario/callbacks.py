@@ -59,6 +59,9 @@ class EpisodiosCallback(BaseCallback):
         for info in self.locals["infos"]:
             if "motivo" not in info:
                 continue
+            if info.get("practica"):  # empezó a medio nivel: no cuenta para las metas ni el avance
+                self.logger.record_mean("mario/practica_meta", float(info["motivo"] == "meta"))
+                continue
             meta = info["motivo"] == "meta"
             self.metas.append(meta)
             self.logger.record_mean("mario/progreso", info["progreso"])
@@ -110,7 +113,7 @@ class NivelesCallback(BaseCallback):
             self.ultima_mejora = self.num_timesteps
         nombre = config.nombre_nivel(self.nivel)
         for info in self.locals["infos"]:
-            if info.get("nivel") != nombre:  # episodios del nivel anterior que aún terminaban
+            if info.get("nivel") != nombre or info.get("practica"):  # otro nivel, o empezó a medio nivel
                 continue
             meta = info["motivo"] == "meta"
             self.metas.append(meta)

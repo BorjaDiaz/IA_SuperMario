@@ -34,6 +34,9 @@ Después, desde esta carpeta:
   los menús y el de cada nivel siguiente repitiendo el récord del anterior hasta el mástil. `train.py` repite un nivel hasta agotarlo (llega a la
   meta en el 80 % de los últimos 100 episodios y lleva `PASOS_SIN_MEJORA` pasos sin récord), lo apunta en
   `niveles.json` y sigue con el siguiente usando el mismo modelo. Al relanzarlo continúa por el primero pendiente.
+- Búsqueda de trucos: acciones de 2 fotogramas con 15 combinaciones de botones, exploración alta y **práctica**:
+  cada clon guarda puntos de sus partidas que llegan a la meta y en un 25 % de los episodios empieza en uno de ellos
+  (con el tiempo contado desde el inicio real). Esas partidas no dan récords ni cuentan en las estadísticas.
 - `mario/env.py`: el entorno. Lee de la RAM la X de Mario (avance) y su estado (5 = mástil, 3/17 = muerte), medidos
   en el emulador y anotados en `config.py`. Cada récord guarda en `records.json` sus acciones; el emulador es
   determinista y el azar del juego va en el state, así que `ver_ia.py --record` lo repite igual.

@@ -80,6 +80,61 @@ class MarioEnvTests(unittest.TestCase):
 
 
 @unittest.skipUnless(os.path.exists(config.state_path((1, 1))), "Falta el state del 1-1 (crear_states.py)")
+class PracticaTests(unittest.TestCase):
+    """Episodios que empiezan en puntos de partidas propias que llegaron a la meta."""
+
+    def setUp(self):
+        with open(META_1_1, encoding="utf-8") as f:
+            self.acciones = json.load(f)
+        parche = mock.patch.object(config, "PRACTICA_PROB", 1.0)
+        parche.start()
+        self.addCleanup(parche.stop)
+
+    def test_off_by_default_so_viewers_and_records_always_start_at_the_beginning(self):
+        env = MarioEnv(rank=99)
+        try:
+            env.repetir(self.acciones, 4)
+            env.reset()
+            self.assertFalse(env.es_practica)
+            self.assertEqual((env.frames, env.x()), (0, 32))
+        finally:
+            env.close()
+
+    def test_after_a_game_that_reaches_the_goal_it_practises_from_its_points(self):
+        env = MarioEnv(rank=99, practica=True)
+        try:
+            env.reset()
+            self.assertFalse(env.es_practica)  # aún no hay puntos
+            info = env.repetir(self.acciones, 4)
+            self.assertEqual(info["motivo"], "meta")
+            self.assertEqual(len(env.puntos_practica), 1418 // config.PRACTICA_CADA_FRAMES)
+            env.reset()
+            self.assertTrue(env.es_practica)
+            self.assertGreater(env.frames, 0)  # el tiempo sigue contando desde el inicio real del nivel
+            self.assertGreater(env.x(), 32)
+        finally:
+            env.close()
+
+    def test_a_practice_game_keeps_the_real_time_and_never_sets_a_record(self):
+        env = MarioEnv(rank=99, practica=True)
+        try:
+            env.repetir(self.acciones, 4)
+            env.rng.choice = lambda puntos: puntos[-1]  # el punto más avanzado: fotograma 1320 = paso 330
+            env.reset()
+            self.assertEqual(env.frames, 1320)
+            with mock.patch.object(env, "_guardar_si_es_record") as guardar:
+                info = {}
+                for b in self.acciones[1320 // 4:]:  # el resto de la misma partida
+                    _, _, fin, _, info = env.paso(b, 4)
+                    if fin:
+                        break
+            self.assertEqual((info["motivo"], info["frames"], info["practica"]), ("meta", 1418, True))
+            guardar.assert_not_called()
+        finally:
+            env.close()
+
+
+@unittest.skipUnless(os.path.exists(config.state_path((1, 1))), "Falta el state del 1-1 (crear_states.py)")
 class NivelSiguienteTests(unittest.TestCase):
     """El state del 1-2 sale de repetir una partida que pasa el 1-1 (en una carpeta temporal)."""
 

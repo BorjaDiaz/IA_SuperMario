@@ -2,7 +2,9 @@
 import io
 import json
 import os
+import random
 import time
+from collections import deque
 
 import gymnasium as gym
 import numpy as np
@@ -13,9 +15,14 @@ from mario import config
 
 
 class MarioEnv(gym.Env):
-    def __init__(self, rank=0, ventana=False, velocidad=0, nivel=None):
+    def __init__(self, rank=0, ventana=False, velocidad=0, nivel=None, practica=False):
+        """practica=True (solo el entrenamiento): algunos episodios empiezan en puntos de partidas propias que
+        llegaron a la meta (ver PRACTICA_PROB en config.py)."""
         super().__init__()
         self.rank = rank
+        self.practica = practica
+        self.puntos_practica = deque(maxlen=config.PRACTICA_MAX)
+        self.rng = random.Random(time.time_ns() + rank)
         self.pb = PyBoy(config.ROM_PATH, window="SDL2" if ventana else "null", sound_emulated=False)
         self.pb.set_emulation_speed(velocidad)
         self.nivel = None
@@ -36,10 +43,22 @@ class MarioEnv(gym.Env):
         if self.nivel_pendiente != self.nivel:
             self._cargar_state(self.nivel_pendiente)
         self._soltar_todo()
-        self.state.seek(0)
-        self.pb.load_state(self.state)
+        punto = None
+        if self.practica and self.puntos_practica and self.rng.random() < config.PRACTICA_PROB:
+            punto = self.rng.choice(self.puntos_practica)
+        self.es_practica = punto is not None
+        if punto:
+            estado, frames, botones = punto
+            self.pb.load_state(io.BytesIO(estado))
+            self._pulsar(botones)
+        else:
+            self.state.seek(0)
+            self.pb.load_state(self.state)
         self.episodio += 1
-        self.pasos = self.frames = 0
+        self.pasos = 0
+        self.frames = punto[1] if punto else 0  # el tiempo cuenta desde el inicio real del nivel
+        self.candidatos_practica = []
+        self.proximo_punto = self.frames + config.PRACTICA_CADA_FRAMES
         self.pasos_sin_avance = 0
         self.vidas = self.pb.memory[config.ADDR_VIDAS]
         self.frame_meta = None
@@ -66,6 +85,11 @@ class MarioEnv(gym.Env):
         self.pasos += 1
         self.frames += frames_por_accion
         self.acciones.append(list(botones))
+        if self.practica and self.frames >= self.proximo_punto:
+            guardado = io.BytesIO()
+            self.pb.save_state(guardado)
+            self.candidatos_practica.append((guardado.getvalue(), self.frames, tuple(self.pulsados)))
+            self.proximo_punto += config.PRACTICA_CADA_FRAMES
         reward = config.REWARD_PASO
 
         # Avance: solo cuenta pasar de la mejor marca del episodio (ir y volver no paga)
@@ -93,7 +117,9 @@ class MarioEnv(gym.Env):
             motivo = "meta"
             self.frames = self.frame_meta
             reward += recompensa_meta(self.frames)
-            self._guardar_si_es_record()
+            self.puntos_practica.extend(self.candidatos_practica)  # solo puntos de partidas que llegan
+            if not self.es_practica:
+                self._guardar_si_es_record()
         elif self.pasos_sin_avance >= config.MAX_PASOS_SIN_AVANCE:
             motivo = "atasco"
             reward += config.PENALTY_ATASCO
@@ -102,7 +128,7 @@ class MarioEnv(gym.Env):
         info = {}
         if motivo:
             info = {"motivo": motivo, "nivel": config.nombre_nivel(self.nivel), "frames": self.frames,
-                    "progreso": self.progreso_max - self.progreso_inicio}
+                    "progreso": self.progreso_max - self.progreso_inicio, "practica": self.es_practica}
             self._registrar_episodio(motivo)
         return self._obs(), reward, motivo is not None, False, info
 
@@ -161,7 +187,7 @@ class MarioEnv(gym.Env):
     def _registrar_episodio(self, motivo):
         fila = {"rank": self.rank, "episodio": self.episodio, "motivo": motivo, "pasos": self.pasos,
                 "frames": self.frames, "progreso": self.progreso_max - self.progreso_inicio,
-                "recompensa": round(self.recompensa_total, 3),
+                "recompensa": round(self.recompensa_total, 3), "practica": self.es_practica,
                 "nivel": config.nombre_nivel(self.nivel), "timestamp": round(time.time(), 1)}
         with open(self.metricas_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(fila) + "\n")
