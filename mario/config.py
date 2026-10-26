@@ -42,7 +42,8 @@ PASOS_SIN_MEJORA = 3_000_000
 # Acciones = combinaciones de botones mantenidas FRAMES_POR_ACCION fotogramas. Pocos fotogramas por
 # acción = control fino: saltos precisos y trucos de movimiento que un control grueso no permitiría.
 # A salta (más alto cuanto más se mantiene; para volver a saltar hay que soltarlo) y B corre y lanza fuego.
-# Para buscar trucos y glitches: todas las combinaciones con sentido, aunque una persona casi nunca las use
+# Un modelo entrenado solo sirve con esta lista exacta (mismo orden). Con 15 acciones (más A+B, izquierda+A+B y
+# agacharse en carrera) un modelo nuevo no llegó a la meta en 3,5 h: se volvió a estas 12 y al modelo que domina el 1-1
 ACCIONES = [
     (),                       # nada
     ("right",),
@@ -52,12 +53,9 @@ ACCIONES = [
     ("left",),
     ("left", "a"),
     ("left", "b"),            # correr hacia atrás
-    ("left", "a", "b"),
     ("a",),
     ("b",),                   # bola de fuego sin moverse
-    ("a", "b"),               # saltar sin dirección manteniendo la carrera
     ("down",),                # agacharse / entrar en tuberías
-    ("right", "down"),        # agacharse en carrera (deslizar)
     ("up",),                  # trepar por las enredaderas
 ]
 # Con 2 fotogramas (para trucos de precisión) un modelo nuevo no pasó de las tuberías del 1-1 (x=675) en 78 min:
@@ -124,13 +122,14 @@ PPO_LEARNING_RATE = 0.00025
 PPO_N_STEPS = 1024
 PPO_BATCH_SIZE = 512           # con 12 clones: 1.140 pasos/s frente a 1.020 con 256 (aprender 2,0 s frente a 3,3 s)
 PPO_N_EPOCHS = 4
-# Horizonte largo: valora el atasco y la meta lejanos. Con 4 fotogramas el atasco (-15) queda a 75 pasos:
-# 0,998^75 = 0,86, pesa ~-12,9 desde donde empieza, peor que morir (-10)
-PPO_GAMMA = 0.998
+# Horizonte: valora el atasco y la meta lejanos. El atasco (-15) queda a 75 pasos: 0,995^75 = 0,69, pesa ~-10,3
+# desde donde empieza, peor que morir (-10). Es con lo que aprendió el modelo que domina el 1-1
+PPO_GAMMA = 0.995
 # Exploración: con 0,01 la entropía bajó a 1,69 y dejó de probar a saltar el foso. Con 0,05 y 15 acciones se quedó
 # en ~2,53 de 2,71 (casi al azar): en 2 h no llegó ni una vez a la meta desde el principio, aunque desde los puntos
-# de práctica llegaba el 98 %. 0,03 es con lo que aprendió el 1-1 (una vez dominado bajó a ~1,0)
-PPO_ENT_COEF = 0.03
+# de práctica llegaba el 98 %. Con 0,03 aprendió el 1-1, y una vez dominado bajó a ~1,0 y dejó de probar cosas:
+# 0,04 para que, partiendo de ese modelo, siga probando variantes
+PPO_ENT_COEF = 0.04
 PPO_TARGET_KL = 0.03
 CHECKPOINT_FREQ = 500_000     # pasos totales entre copias de seguridad
 MAX_MINUTOS = 180             # de entrenamiento activo (sin contar suspensiones del PC)
