@@ -41,7 +41,8 @@ META_MINIMA = 0.8
 PASOS_SIN_MEJORA = 3_000_000
 # Acciones = combinaciones de botones mantenidas FRAMES_POR_ACCION fotogramas. Pocos fotogramas por
 # acción = control fino: saltos precisos y trucos de movimiento que un control grueso no permitiría.
-# A salta (más alto cuanto más se mantiene; para volver a saltar hay que soltarlo) y B corre y lanza fuego
+# A salta (más alto cuanto más se mantiene; para volver a saltar hay que soltarlo) y B corre y lanza fuego.
+# Para buscar trucos y glitches: todas las combinaciones con sentido, aunque una persona casi nunca las use
 ACCIONES = [
     (),                       # nada
     ("right",),
@@ -51,12 +52,18 @@ ACCIONES = [
     ("left",),
     ("left", "a"),
     ("left", "b"),            # correr hacia atrás
+    ("left", "a", "b"),
     ("a",),
     ("b",),                   # bola de fuego sin moverse
+    ("a", "b"),               # saltar sin dirección manteniendo la carrera
     ("down",),                # agacharse / entrar en tuberías
+    ("right", "down"),        # agacharse en carrera (deslizar)
     ("up",),                  # trepar por las enredaderas
 ]
-FRAMES_POR_ACCION = 4
+# Con 4 fotogramas el 1-1 se quedó en 21,68 s con un 99 % de metas y la IA dejó de explorar: los trucos de
+# Mario suelen ser de 1-2 fotogramas. Los récords guardan sus propios fotogramas por acción, así que los de
+# antes se siguen repitiendo
+FRAMES_POR_ACCION = 2
 # RAM medida en el emulador (capturas en cada cambio). X de Mario en el nivel = página * 256 + x
 ADDR_X_PAGINA = 0xC1CB
 ADDR_X = 0xC1CA
@@ -89,8 +96,10 @@ PENALTY_MUERTE = -10.0
 PENALTY_ATASCO = -15.0
 # El castigo del atasco llega al final y PPO lo descuenta (gamma^pasos): con 150 pasos y gamma 0,99 pesaba ~-2 desde
 # el borde del primer foso frente a -10 de caer, y la IA se quedaba parada (78 % de atascos en x≈1.000-1.100).
-# Con 75 pasos y gamma 0,995 pesa ~-6,9. No menos de ~5 s: hay niveles donde se espera a plataformas móviles
-MAX_PASOS_SIN_AVANCE = 75     # ~5 s de juego sin pasar de su marca: fin del episodio
+# Con 75 pasos de 4 fotogramas y gamma 0,995 pesaba ~-6,9 (con -15, ~-10,3). No menos de ~5 s: hay niveles donde
+# se espera a plataformas móviles. Se mide en fotogramas para que no cambie con FRAMES_POR_ACCION
+MAX_FRAMES_SIN_AVANCE = 300   # ~5 s de juego sin pasar de su marca: fin del episodio
+MAX_PASOS_SIN_AVANCE = MAX_FRAMES_SIN_AVANCE // FRAMES_POR_ACCION
 
 # ==========================================
 # ENTRENAMIENTO (PPO)
@@ -100,13 +109,17 @@ MAX_PASOS_SIN_AVANCE = 75     # ~5 s de juego sin pasar de su marca: fin del epi
 # hilo es el máximo que acelera
 NUM_CLONES = os.cpu_count() or 12
 FRAME_STACK = 4               # ver la velocidad y la dirección de Mario y de los enemigos
-TOTAL_TIMESTEPS = 20_000_000
+TOTAL_TIMESTEPS = 200_000_000  # tope por lanzamiento; lo normal es parar con PARAR o --minutos
 PPO_LEARNING_RATE = 0.00025
 PPO_N_STEPS = 1024
 PPO_BATCH_SIZE = 512           # con 12 clones: 1.140 pasos/s frente a 1.020 con 256 (aprender 2,0 s frente a 3,3 s)
 PPO_N_EPOCHS = 4
-PPO_GAMMA = 0.995             # horizonte más largo: valora el atasco y la meta lejanos (ver MAX_PASOS_SIN_AVANCE)
-PPO_ENT_COEF = 0.03           # más exploración: con 0,01 la entropía bajó a 1,69 y dejó de probar a saltar el foso
+# Horizonte en pasos: con pasos de 2 fotogramas hacen falta el doble para ver lo mismo. 0,998^150 = 0,74: el atasco
+# (-15, a 150 pasos) pesa ~-11,1 desde donde empieza, aún peor que morir (-10)
+PPO_GAMMA = 0.998
+# Exploración: con 0,01 la entropía bajó a 1,69 y dejó de probar a saltar el foso; con 0,03, una vez dominado el
+# 1-1 bajó a ~1,0 y dejó de probar cosas nuevas. Para buscar trucos hace falta que siga probando
+PPO_ENT_COEF = 0.05
 PPO_TARGET_KL = 0.03
 CHECKPOINT_FREQ = 500_000     # pasos totales entre copias de seguridad
 MAX_MINUTOS = 180             # de entrenamiento activo (sin contar suspensiones del PC)
