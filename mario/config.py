@@ -127,9 +127,10 @@ PPO_N_EPOCHS = 4
 # Horizonte largo: valora el atasco y la meta lejanos. Con 4 fotogramas el atasco (-15) queda a 75 pasos:
 # 0,998^75 = 0,86, pesa ~-12,9 desde donde empieza, peor que morir (-10)
 PPO_GAMMA = 0.998
-# Exploración: con 0,01 la entropía bajó a 1,69 y dejó de probar a saltar el foso; con 0,03, una vez dominado el
-# 1-1 bajó a ~1,0 y dejó de probar cosas nuevas. Para buscar trucos hace falta que siga probando
-PPO_ENT_COEF = 0.05
+# Exploración: con 0,01 la entropía bajó a 1,69 y dejó de probar a saltar el foso. Con 0,05 y 15 acciones se quedó
+# en ~2,53 de 2,71 (casi al azar): en 2 h no llegó ni una vez a la meta desde el principio, aunque desde los puntos
+# de práctica llegaba el 98 %. 0,03 es con lo que aprendió el 1-1 (una vez dominado bajó a ~1,0)
+PPO_ENT_COEF = 0.03
 PPO_TARGET_KL = 0.03
 CHECKPOINT_FREQ = 500_000     # pasos totales entre copias de seguridad
 MAX_MINUTOS = 180             # de entrenamiento activo (sin contar suspensiones del PC)
