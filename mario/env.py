@@ -162,6 +162,33 @@ class MarioEnv(gym.Env):
         with open(config.state_path(nivel), "rb") as f:
             self.state = io.BytesIO(f.read())
         self.nivel = nivel
+        if self.practica:
+            self.puntos_practica.clear()
+            self._sembrar_practica()
+
+    def _sembrar_practica(self):
+        """Primeros puntos de práctica: los del récord del nivel, si lo hay (una partida de la propia IA, quizá
+        con otros fotogramas por acción). Así practica tramos de todo el nivel antes de saber llegar."""
+        record = cargar_records().get(config.nombre_nivel(self.nivel))
+        if not record:
+            return
+        self.state.seek(0)
+        self.pb.load_state(self.state)
+        frames, proximo = 0, config.PRACTICA_CADA_FRAMES
+        for botones in record["botones"]:
+            self._pulsar(botones)
+            for _ in range(record["frames_por_accion"]):
+                self.pb.tick(1, False)
+                frames += 1
+                if self.pb.memory[config.ADDR_ESTADO] == config.ESTADO_META:
+                    self._soltar_todo()
+                    return
+            if frames >= proximo:
+                guardado = io.BytesIO()
+                self.pb.save_state(guardado)
+                self.puntos_practica.append((guardado.getvalue(), frames, tuple(self.pulsados)))
+                proximo += config.PRACTICA_CADA_FRAMES
+        self._soltar_todo()
 
     def _pulsar(self, botones):
         """Mantiene pulsados exactamente esos botones (suelta los demás)."""

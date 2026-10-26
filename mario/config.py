@@ -60,10 +60,10 @@ ACCIONES = [
     ("right", "down"),        # agacharse en carrera (deslizar)
     ("up",),                  # trepar por las enredaderas
 ]
-# Con 4 fotogramas el 1-1 se quedó en 21,68 s con un 99 % de metas y la IA dejó de explorar: los trucos de
-# Mario suelen ser de 1-2 fotogramas. Los récords guardan sus propios fotogramas por acción, así que los de
-# antes se siguen repitiendo
-FRAMES_POR_ACCION = 2
+# Con 2 fotogramas (para trucos de precisión) un modelo nuevo no pasó de las tuberías del 1-1 (x=675) en 78 min:
+# saltarlas pide ~10 decisiones iguales seguidas y a ~1.700 fotogramas/s de juego, 3 veces menos que con 4. Con 4
+# las pasaba en ~10 min. Los récords guardan sus propios fotogramas por acción, así que todos se siguen repitiendo
+FRAMES_POR_ACCION = 4
 # RAM medida en el emulador (capturas en cada cambio). X de Mario en el nivel = página * 256 + x
 ADDR_X_PAGINA = 0xC1CB
 ADDR_X = 0xC1CA
@@ -122,8 +122,8 @@ PPO_LEARNING_RATE = 0.00025
 PPO_N_STEPS = 1024
 PPO_BATCH_SIZE = 512           # con 12 clones: 1.140 pasos/s frente a 1.020 con 256 (aprender 2,0 s frente a 3,3 s)
 PPO_N_EPOCHS = 4
-# Horizonte en pasos: con pasos de 2 fotogramas hacen falta el doble para ver lo mismo. 0,998^150 = 0,74: el atasco
-# (-15, a 150 pasos) pesa ~-11,1 desde donde empieza, aún peor que morir (-10)
+# Horizonte largo: valora el atasco y la meta lejanos. Con 4 fotogramas el atasco (-15) queda a 75 pasos:
+# 0,998^75 = 0,86, pesa ~-12,9 desde donde empieza, peor que morir (-10)
 PPO_GAMMA = 0.998
 # Exploración: con 0,01 la entropía bajó a 1,69 y dejó de probar a saltar el foso; con 0,03, una vez dominado el
 # 1-1 bajó a ~1,0 y dejó de probar cosas nuevas. Para buscar trucos hace falta que siga probando

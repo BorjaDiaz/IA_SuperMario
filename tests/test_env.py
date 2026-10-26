@@ -89,6 +89,9 @@ class PracticaTests(unittest.TestCase):
         parche = mock.patch.object(config, "PRACTICA_PROB", 1.0)
         parche.start()
         self.addCleanup(parche.stop)
+        # Sin récord salvo que el test lo ponga: el records.json real sembraría puntos de práctica
+        self.records = mock.patch("mario.env.cargar_records", return_value={}).start()
+        self.addCleanup(mock.patch.stopall)
 
     def test_off_by_default_so_viewers_and_records_always_start_at_the_beginning(self):
         env = MarioEnv(rank=99)
@@ -112,6 +115,25 @@ class PracticaTests(unittest.TestCase):
             self.assertTrue(env.es_practica)
             self.assertGreater(env.frames, 0)  # el tiempo sigue contando desde el inicio real del nivel
             self.assertGreater(env.x(), 32)
+        finally:
+            env.close()
+
+    def test_practice_starts_with_points_from_the_level_record(self):
+        self.records.return_value = {"1-1": {"botones": self.acciones, "frames_por_accion": 4}}
+        env = MarioEnv(rank=99, practica=True)
+        try:
+            env.reset()
+            self.assertEqual(len(env.puntos_practica), 1418 // config.PRACTICA_CADA_FRAMES)
+            self.assertTrue(env.es_practica)  # ya desde el primer episodio
+            # El punto guardado es el mismo que al jugar la partida: seguirla desde ahí llega igual al mástil
+            env.rng.choice = lambda puntos: puntos[-1]
+            env.reset()
+            info = {}
+            for b in self.acciones[env.frames // 4:]:
+                _, _, fin, _, info = env.paso(b, 4)
+                if fin:
+                    break
+            self.assertEqual((info["motivo"], info["frames"]), ("meta", 1418))
         finally:
             env.close()
 
