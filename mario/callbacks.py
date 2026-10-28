@@ -32,6 +32,9 @@ class ParadaCallback(BaseCallback):
         self.ultimo = time.time()
 
     def _on_step(self):
+        if self.motivo:  # puesto desde fuera (Ctrl+C en train.py)
+            print(f"\n🛑 {self.motivo}: deteniendo el entrenamiento y guardando...")
+            return False
         if self.n_calls % 100:
             return True
         ahora = time.time()
@@ -166,7 +169,9 @@ class VideoRecordCallback(BaseCallback):
         import subprocess
         import sys
         self.version_grabada = version
-        prioridad_baja = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
+        # Prioridad baja y su propio grupo de procesos: un Ctrl+C en la terminal del entrenamiento no corta el vídeo
+        prioridad_baja = (getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
+                          | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
         self.proceso = subprocess.Popen(
             [sys.executable, os.path.join(config.BASE_DIR, "video.py"), "--nivel", config.nombre_nivel(self.nivel)],
             cwd=config.BASE_DIR, creationflags=prioridad_baja,

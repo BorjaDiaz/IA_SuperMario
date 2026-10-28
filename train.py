@@ -5,11 +5,12 @@ Uso (desde la carpeta "SuperMario"):
     .venv\\Scripts\\python.exe train.py --nivel 2-1  # empezar por ese nivel
     .venv\\Scripts\\python.exe train.py --quedarse --minutos 0  # exprimir el nivel actual, sin límite de tiempo
 Cada nivel se repite hasta agotarlo (ver PASOS_SIN_MEJORA en config.py) y luego sigue con el siguiente.
-Para pararla de forma ordenada, crea un archivo llamado PARAR en esta carpeta.
+Para pararla de forma ordenada: Ctrl+C en su terminal, o crear un archivo llamado PARAR en esta carpeta.
 """
 import argparse
 import json
 import os
+import signal
 import sys
 import time
 
@@ -29,8 +30,31 @@ from mario.callbacks import (EpisodiosCallback, NivelesCallback, ParadaCallback,
 from mario.env import MarioEnv
 
 
+def ignorar_ctrl_c():
+    """Ctrl+C llega a todos los procesos de la consola: los clones lo ignoran y solo el principal decide parar.
+    Si cada clon muriera por su cuenta, el principal se quedaría con las conexiones cortadas a medio paso."""
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    if hasattr(signal, "SIGBREAK"):
+        signal.signal(signal.SIGBREAK, signal.SIG_IGN)
+
+
 def crear_clon(rank, nivel):
-    return lambda: Monitor(MarioEnv(rank=rank, nivel=nivel, practica=True))
+    def crear():
+        ignorar_ctrl_c()
+        return Monitor(MarioEnv(rank=rank, nivel=nivel, practica=True))
+    return crear
+
+
+def parar_con_ctrl_c(parada):
+    """Primer Ctrl+C: para como con PARAR (al acabar el paso en curso) y guarda. Segundo: corta ya."""
+    def al_pulsar(signum, frame):
+        if parada.motivo:
+            raise KeyboardInterrupt
+        parada.motivo = "parado con Ctrl+C"
+        print("\n⏳ Ctrl+C: terminando el paso en curso y guardando... (otro Ctrl+C para cortar ya)", flush=True)
+    signal.signal(signal.SIGINT, al_pulsar)
+    if hasattr(signal, "SIGBREAK"):
+        signal.signal(signal.SIGBREAK, al_pulsar)
 
 
 def hiperparametros():
@@ -74,6 +98,7 @@ def main():
             "config": {k: getattr(config, k) for k in dir(config) if k.isupper() and not k.endswith(("_DIR", "_PATH", "_FILE"))
                        and k not in ("MODELO", "ROM_PATH")}}
     parada = ParadaCallback(args.minutos)
+    parar_con_ctrl_c(parada)
     checkpoint = CheckpointCallback(save_freq=max(1, config.CHECKPOINT_FREQ // config.NUM_CLONES),
                                     save_path=config.CHECKPOINTS_DIR, name_prefix="mario")
     try:

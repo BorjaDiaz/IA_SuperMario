@@ -19,7 +19,7 @@ Después, desde esta carpeta:
 |---|---|
 | Crear el state del 1-1 y los de los niveles ya pasados | `.venv\Scripts\python.exe crear_states.py` |
 | Entrenar (continúa `ia/modelo.zip` si existe) | `.venv\Scripts\python.exe train.py [--nivel 1-2]` |
-| Parar de forma ordenada | crear un archivo `PARAR` en esta carpeta |
+| Parar de forma ordenada (guarda el modelo) | Ctrl+C en la terminal del entrenamiento (un segundo Ctrl+C corta sin esperar), o crear un archivo `PARAR` en esta carpeta |
 | Resumen de la última ejecución | `.venv\Scripts\python.exe analisis.py` |
 | Ver jugar a la IA | `.venv\Scripts\python.exe ver_ia.py` |
 | Ver una partida guardada (p. ej. la del test, que llega al mástil del 1-1) | `.venv\Scripts\python.exe ver_ia.py --acciones tests\datos\meta_1-1.json` |
