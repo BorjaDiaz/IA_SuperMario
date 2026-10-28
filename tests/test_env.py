@@ -138,6 +138,20 @@ class PracticaTests(unittest.TestCase):
         finally:
             env.close()
 
+    def test_only_games_close_to_its_best_time_give_practice_points(self):
+        env = MarioEnv(rank=99, practica=True)
+        try:
+            env.reset()
+            env.frames_tipicos = 1300  # su mejor meta: 1418 es más de un 3 % peor
+            env.rng.randint = lambda a, b: 600
+            env.repetir(self.acciones, 4)
+            self.assertEqual(len(env.puntos_practica), 0)
+            env.frames_tipicos = 1400  # ahora 1418 está dentro del margen
+            env.repetir(self.acciones, 4)
+            self.assertEqual(len(env.puntos_practica), 1)
+        finally:
+            env.close()
+
     def test_a_practice_game_keeps_the_real_time_and_never_sets_a_record(self):
         env = MarioEnv(rank=99, practica=True)
         try:

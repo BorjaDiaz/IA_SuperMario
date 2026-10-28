@@ -177,3 +177,35 @@ class VideoRecordCallback(BaseCallback):
             cwd=config.BASE_DIR, creationflags=prioridad_baja,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return True
+
+
+class SeguridadCallback(BaseCallback):
+    """Explorar sin olvidar: guarda MODELO_SEGURO mientras llega a la meta casi siempre y, si la exploración lo
+    estropea (baja de SEGURIDAD_MINIMA), vuelve a esa copia. Solo cuentan las partidas normales del nivel."""
+
+    def __init__(self, nivel):
+        super().__init__()
+        self.nivel = config.nombre_nivel(nivel)
+        self.metas = deque(maxlen=config.SEGURIDAD_VENTANA)
+        self.ultimo_guardado = 0.0
+        self.vueltas = 0
+
+    def _on_step(self):
+        for info in self.locals["infos"]:
+            if "motivo" in info and not info.get("practica") and info.get("nivel") == self.nivel:
+                self.metas.append(info["motivo"] == "meta")
+        if len(self.metas) < self.metas.maxlen:
+            return True
+        tasa = sum(self.metas) / len(self.metas)
+        self.logger.record("mario/tasa_seguridad", tasa)
+        if tasa >= config.SEGURIDAD_BUENA:
+            if time.time() - self.ultimo_guardado >= config.SEGURIDAD_MINUTOS * 60:
+                self.model.save(config.MODELO_SEGURO)
+                self.ultimo_guardado = time.time()
+        elif tasa < config.SEGURIDAD_MINIMA and os.path.exists(config.MODELO_SEGURO):
+            self.model.set_parameters(config.MODELO_SEGURO, device=self.model.device)
+            self.vueltas += 1
+            self.logger.record("mario/vueltas_al_seguro", self.vueltas)
+            print(f"\n🛟 Llegaba a la meta solo el {100 * tasa:.0f} %: vuelvo al último modelo seguro")
+            self.metas.clear()
+        return True

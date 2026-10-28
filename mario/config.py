@@ -5,6 +5,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROM_PATH = os.path.join(BASE_DIR, "roms", "Super Mario Bros. Deluxe (USA, Europe) (Rev A).gbc")
 IA_DIR = os.path.join(BASE_DIR, "ia")
 MODELO = os.path.join(IA_DIR, "modelo.zip")
+MODELO_SEGURO = os.path.join(IA_DIR, "modelo_seguro.zip")  # última versión que llegaba a la meta casi siempre
 CHECKPOINTS_DIR = os.path.join(IA_DIR, "checkpoints")
 RUNS_DIR = os.path.join(BASE_DIR, "runs")
 RECORDS_PATH = os.path.join(BASE_DIR, "records.json")
@@ -107,7 +108,10 @@ PRACTICA_PROB = 0.25
 PRACTICA_CADA_FRAMES = 120    # al sembrar con el récord: un punto cada ~2 s de juego
 # Guardar un state en PyBoy cuesta ~35 ms: con un punto cada 2 s en todas las partidas un clon iba a la mitad de
 # velocidad (434 frente a 915 pasos/s). Con uno por partida, en un fotograma al azar, la lista se llena igual
-PRACTICA_MAX = 60             # puntos guardados por clon (los más recientes: de sus partidas más rápidas)
+PRACTICA_MAX = 60             # puntos guardados por clon (los más recientes)
+# Solo se practica desde partidas como mucho un 3 % más lentas que la mejor del clon: variantes alrededor de su ruta
+# más rápida, que es donde se ganan centésimas
+PRACTICA_MARGEN = 0.03
 
 # ==========================================
 # ENTRENAMIENTO (PPO)
@@ -129,7 +133,14 @@ PPO_GAMMA = 0.995
 # en ~2,53 de 2,71 (casi al azar): en 2 h no llegó ni una vez a la meta desde el principio, aunque desde los puntos
 # de práctica llegaba el 98 %. Con 0,03 aprendió el 1-1, y una vez dominado bajó a ~1,0 y dejó de probar cosas:
 # 0,04 para que, partiendo de ese modelo, siga probando variantes
-PPO_ENT_COEF = 0.04
+PPO_ENT_COEF = 0.06
 PPO_TARGET_KL = 0.03
 CHECKPOINT_FREQ = 500_000     # pasos totales entre copias de seguridad
+# Red de seguridad para explorar sin olvidar: mientras llega a la meta en al menos SEGURIDAD_BUENA de las últimas
+# SEGURIDAD_VENTANA partidas normales, se guarda MODELO_SEGURO (como mucho cada SEGURIDAD_MINUTOS); si baja de
+# SEGURIDAD_MINIMA, vuelve a esa copia. Con exploración alta (0,05) un modelo llegó a perder lo aprendido
+SEGURIDAD_VENTANA = 300
+SEGURIDAD_BUENA = 0.95
+SEGURIDAD_MINIMA = 0.85
+SEGURIDAD_MINUTOS = 10
 MAX_MINUTOS = 180             # de entrenamiento activo (sin contar suspensiones del PC)

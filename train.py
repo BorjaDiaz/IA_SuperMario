@@ -25,8 +25,8 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecFrameStack
 
 from mario import config, states
-from mario.callbacks import (EpisodiosCallback, NivelesCallback, ParadaCallback, VideoRecordCallback,
-                             primer_nivel_pendiente, quitar_parar)
+from mario.callbacks import (EpisodiosCallback, NivelesCallback, ParadaCallback, SeguridadCallback,
+                             VideoRecordCallback, primer_nivel_pendiente, quitar_parar)
 from mario.env import MarioEnv
 
 
@@ -103,7 +103,7 @@ def main():
                                     save_path=config.CHECKPOINTS_DIR, name_prefix="mario")
     try:
         model.learn(total_timesteps=config.TOTAL_TIMESTEPS, callback=[checkpoint, EpisodiosCallback(), NivelesCallback(nivel, parada, args.quedarse),
-                                                                    VideoRecordCallback(nivel), parada],
+                                                                    VideoRecordCallback(nivel), SeguridadCallback(nivel), parada],
                     reset_num_timesteps=nuevo, tb_log_name="PPO")
     except KeyboardInterrupt:
         parada.motivo = "interrumpido (Ctrl+C)"

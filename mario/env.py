@@ -22,7 +22,7 @@ class MarioEnv(gym.Env):
         self.rank = rank
         self.practica = practica
         self.puntos_practica = deque(maxlen=config.PRACTICA_MAX)
-        self.frames_tipicos = config.FRAMES_REFERENCIA // 2  # hasta dónde se reparten los puntos (última meta)
+        self.frames_tipicos = config.FRAMES_REFERENCIA  # su mejor meta: hasta dónde se reparten y filtran los puntos
         self.rng = random.Random(time.time_ns() + rank)
         self.pb = PyBoy(config.ROM_PATH, window="SDL2" if ventana else "null", sound_emulated=False)
         self.pb.set_emulation_speed(velocidad)
@@ -119,8 +119,10 @@ class MarioEnv(gym.Env):
             motivo = "meta"
             self.frames = self.frame_meta
             reward += recompensa_meta(self.frames)
-            self.puntos_practica.extend(self.candidatos_practica)  # solo puntos de partidas que llegan
-            self.frames_tipicos = self.frames
+            # Solo puntos de partidas que llegan, y no mucho más lentas que la mejor del clon
+            if self.frames <= self.frames_tipicos * (1 + config.PRACTICA_MARGEN):
+                self.puntos_practica.extend(self.candidatos_practica)
+            self.frames_tipicos = min(self.frames_tipicos, self.frames)
             if not self.es_practica:
                 self._guardar_si_es_record()
         elif self.pasos_sin_avance >= config.MAX_PASOS_SIN_AVANCE:

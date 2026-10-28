@@ -84,3 +84,39 @@ class RecompensaMetaTests(unittest.TestCase):
     def test_reaching_the_goal_always_pays_at_least_reward_meta(self):
         from mario.env import recompensa_meta
         self.assertEqual(recompensa_meta(10 * config.FRAMES_REFERENCIA), config.REWARD_META)
+
+
+class SeguridadTests(unittest.TestCase):
+    """Explorar sin olvidar: guarda la copia segura si va bien y vuelve a ella si se estropea."""
+
+    def callback(self):
+        from mario.callbacks import SeguridadCallback
+        cb = SeguridadCallback((1, 1))
+        cb.model = mock.Mock(num_timesteps=0, device="cpu")
+        return cb
+
+    def jugar(self, cb, metas, total):
+        infos = [{"motivo": "meta" if i < metas else "muerte", "nivel": "1-1", "practica": False}
+                 for i in range(total)]
+        cb.locals = {"infos": infos}
+        cb.on_step()
+
+    def test_saves_the_safe_model_while_it_reaches_the_goal_almost_always(self):
+        cb = self.callback()
+        self.jugar(cb, 290, config.SEGURIDAD_VENTANA)  # 97 %
+        cb.model.save.assert_called_once_with(config.MODELO_SEGURO)
+        cb.model.set_parameters.assert_not_called()
+
+    def test_goes_back_to_the_safe_model_when_exploring_breaks_it(self):
+        cb = self.callback()
+        with mock.patch("mario.callbacks.os.path.exists", return_value=True):
+            self.jugar(cb, 240, config.SEGURIDAD_VENTANA)  # 80 %
+        cb.model.set_parameters.assert_called_once()
+        self.assertEqual(cb.model.set_parameters.call_args.args[0], config.MODELO_SEGURO)
+        self.assertEqual(len(cb.metas), 0)  # vuelve a medir desde cero
+
+    def test_practice_games_do_not_count(self):
+        cb = self.callback()
+        cb.locals = {"infos": [{"motivo": "muerte", "nivel": "1-1", "practica": True}] * config.SEGURIDAD_VENTANA}
+        cb.on_step()
+        self.assertEqual(len(cb.metas), 0)
