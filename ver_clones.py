@@ -1,6 +1,6 @@
 """Ver a varios clones jugar a la vez, en cuadrícula, con el último checkpoint (no entrena ni cambia nada).
 
-Uso (desde la carpeta "Super Mario"):
+Uso (desde la carpeta "SuperMario"):
     .venv\\Scripts\\python.exe ver_clones.py                  # 6 clones con el último checkpoint
     .venv\\Scripts\\python.exe ver_clones.py --clones 9 --velocidad 2
 Cada clon elige sus acciones con el mismo azar que en el entrenamiento, así que cada uno juega distinto.

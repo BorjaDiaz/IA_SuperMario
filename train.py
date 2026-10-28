@@ -1,6 +1,6 @@
 """Entrena la IA del speedrun de Super Mario Bros. Deluxe. Continúa ia/modelo.zip si existe.
 
-Uso (desde la carpeta "Super Mario"):
+Uso (desde la carpeta "SuperMario"):
     .venv\\Scripts\\python.exe train.py              # primer nivel sin agotar (niveles.json)
     .venv\\Scripts\\python.exe train.py --nivel 2-1  # empezar por ese nivel
     .venv\\Scripts\\python.exe train.py --quedarse --minutos 0  # exprimir el nivel actual, sin límite de tiempo

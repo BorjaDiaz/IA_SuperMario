@@ -1,6 +1,6 @@
 """Graba en MP4 la partida récord de un nivel, repitiendo sus acciones (no entrena ni cambia nada).
 
-Uso (desde la carpeta "Super Mario"):
+Uso (desde la carpeta "SuperMario"):
     .venv\\Scripts\\python.exe video.py              # récord del 1-1 -> videos/1-1_41.92s.mp4
     .venv\\Scripts\\python.exe video.py --nivel 1-2
 El emulador es determinista: el vídeo no hace falta grabarlo mientras se entrena, se saca después del récord.

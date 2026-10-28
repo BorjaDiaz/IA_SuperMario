@@ -1,6 +1,6 @@
 """Ver a la IA jugar, o repetir exactamente la partida récord de un nivel (no entrena ni cambia nada).
 
-Uso (desde la carpeta "Super Mario"):
+Uso (desde la carpeta "SuperMario"):
     .venv\\Scripts\\python.exe ver_ia.py --record        # repite el récord del nivel
     .venv\\Scripts\\python.exe ver_ia.py                 # juega el modelo entrenado
     .venv\\Scripts\\python.exe ver_ia.py --velocidad 3   # 3 veces más rápido

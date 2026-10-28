@@ -1,6 +1,6 @@
 """Crea los states de inicio de los niveles (states/<mundo>-<nivel>.state) jugando, sin tocar RAM ni ROM.
 
-Uso (desde la carpeta "Super Mario"):
+Uso (desde la carpeta "SuperMario"):
     .venv\\Scripts\\python.exe crear_states.py
 Crea el 1-1 desde los menús y, por orden, el de cada nivel cuyo anterior ya tiene récord en records.json
 (repitiendo esa partida hasta el mástil). El entrenamiento también lo hace solo al agotar un nivel.
