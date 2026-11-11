@@ -81,12 +81,15 @@ ESTADOS_MUERTE = (3, 17)
 # se premia solo
 REWARD_PIXEL = 0.01           # por cada píxel más lejos que nunca en el episodio (mástil del 1-1 ≈ x 3.130 ≈ +31)
 MAX_PIXELES_POR_PASO = 40     # un salto mayor en un paso es una lectura rara (cambio de zona): no se premia
-REWARD_PASO = -0.01           # cada paso cuesta: cuanto antes llegue, mejor
+# El tiempo se cobra en cada paso, no al llegar. Un bonus de rapidez en la meta (+200 en 3.000 fotogramas, ~4 pts
+# por segundo) apenas enseñaba a ir más rápido: visto desde el inicio del 1-1 el descuento lo deja en un 18 %
+# (0,995^336), PPO reparte el mérito hacia atrás con (0,995·0,95)^pasos (0,4 % a 100 pasos de la meta) y la IA no
+# ve en pantalla el tiempo exacto que lleva, así que ese bonus le llegaba como ruido. Cobrado paso a paso, cada paso
+# perdido cuesta al momento y en cualquier punto del nivel: -0,2 por paso ≈ 3 puntos por segundo.
+# Llegar sigue compensando siempre: terminar el 1-1 en ~22 s da ~+14 en total; morir aposta al principio, ~-16
+REWARD_PASO = -0.2            # cada paso cuesta: cuanto antes llegue, mejor
 REWARD_META = 50.0            # nivel completado...
-# Cuando ya llega casi siempre (97 % en el 1-1), lo que queda es recortar tiempo: con +50 repartidos en 6.000
-# fotogramas cada segundo ahorrado valía ~0,65 puntos (menos que el ruido entre partidas) y probar algo raro no
-# compensaba. Con +200 en 3.000 fotogramas vale ~4,1 puntos por segundo
-REWARD_META_RAPIDEZ = 200.0   # ...más hasta esto según lo rápido (lineal hasta FRAMES_REFERENCIA)
+REWARD_META_RAPIDEZ = 0.0     # ...más hasta esto según lo rápido (lineal hasta FRAMES_REFERENCIA); ya va en REWARD_PASO
 FRAMES_REFERENCIA = 3000      # ~50 s de juego: tardar esto o más no da bonus de rapidez
 PENALTY_MUERTE = -10.0
 # Atascarse tiene que salir más caro que morir AUN DESCONTADO (llega al final, gamma^pasos): con -1 y 300 pasos la
@@ -133,7 +136,9 @@ PPO_GAMMA = 0.995
 # en ~2,53 de 2,71 (casi al azar): en 2 h no llegó ni una vez a la meta desde el principio, aunque desde los puntos
 # de práctica llegaba el 98 %. Con 0,03 aprendió el 1-1, y una vez dominado bajó a ~1,0 y dejó de probar cosas:
 # 0,04 para que, partiendo de ese modelo, siga probando variantes
-PPO_ENT_COEF = 0.06
+# 0,06 (con la red de seguridad) no encontró nada en 2,5 h y la partida típica pasó de 22,1 s a 24,5 s: jugaba
+# tan al azar que casi nunca repetía su ruta rápida
+PPO_ENT_COEF = 0.03
 PPO_TARGET_KL = 0.03
 CHECKPOINT_FREQ = 500_000     # pasos totales entre copias de seguridad
 # Red de seguridad para explorar sin olvidar: mientras llega a la meta en al menos SEGURIDAD_BUENA de las últimas
@@ -143,4 +148,7 @@ SEGURIDAD_VENTANA = 300
 SEGURIDAD_BUENA = 0.95
 SEGURIDAD_MINIMA = 0.85
 SEGURIDAD_MINUTOS = 10
+# También el tiempo: solo se guarda la copia si la mediana de las metas no es peor que la de la copia guardada, y se
+# vuelve a ella si empeora más de un 5 %. Solo con las metas, explorando llegó igual pero ~2,4 s más lenta
+SEGURIDAD_EMPEORA_TIEMPO = 0.05
 MAX_MINUTOS = 180             # de entrenamiento activo (sin contar suspensiones del PC)

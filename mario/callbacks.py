@@ -180,32 +180,45 @@ class VideoRecordCallback(BaseCallback):
 
 
 class SeguridadCallback(BaseCallback):
-    """Explorar sin olvidar: guarda MODELO_SEGURO mientras llega a la meta casi siempre y, si la exploración lo
-    estropea (baja de SEGURIDAD_MINIMA), vuelve a esa copia. Solo cuentan las partidas normales del nivel."""
+    """Explorar sin olvidar: guarda MODELO_SEGURO mientras llega a la meta casi siempre y no más lento que la copia
+    guardada; si la exploración lo estropea (baja de SEGURIDAD_MINIMA o se vuelve más de SEGURIDAD_EMPEORA_TIEMPO
+    más lento), vuelve a esa copia. Solo cuentan las partidas normales del nivel."""
 
     def __init__(self, nivel):
         super().__init__()
         self.nivel = config.nombre_nivel(nivel)
-        self.metas = deque(maxlen=config.SEGURIDAD_VENTANA)
+        self.partidas = deque(maxlen=config.SEGURIDAD_VENTANA)  # fotogramas de la meta, o None si no llegó
+        self.mediana_segura = None  # mediana de las metas cuando se guardó la copia (en esta ejecución)
         self.ultimo_guardado = 0.0
         self.vueltas = 0
 
     def _on_step(self):
         for info in self.locals["infos"]:
             if "motivo" in info and not info.get("practica") and info.get("nivel") == self.nivel:
-                self.metas.append(info["motivo"] == "meta")
-        if len(self.metas) < self.metas.maxlen:
+                self.partidas.append(info["frames"] if info["motivo"] == "meta" else None)
+        if len(self.partidas) < self.partidas.maxlen:
             return True
-        tasa = sum(self.metas) / len(self.metas)
+        metas = sorted(f for f in self.partidas if f is not None)
+        tasa = len(metas) / len(self.partidas)
+        mediana = metas[len(metas) // 2] if metas else None
         self.logger.record("mario/tasa_seguridad", tasa)
-        if tasa >= config.SEGURIDAD_BUENA:
-            if time.time() - self.ultimo_guardado >= config.SEGURIDAD_MINUTOS * 60:
+        if mediana is not None:
+            self.logger.record("mario/mediana_meta_s", mediana / 59.73)
+        mas_lento = (self.mediana_segura is not None and mediana is not None
+                     and mediana > self.mediana_segura * (1 + config.SEGURIDAD_EMPEORA_TIEMPO))
+        if tasa >= config.SEGURIDAD_BUENA and not mas_lento:
+            no_peor = self.mediana_segura is None or mediana <= self.mediana_segura
+            if no_peor and time.time() - self.ultimo_guardado >= config.SEGURIDAD_MINUTOS * 60:
                 self.model.save(config.MODELO_SEGURO)
+                self.mediana_segura = mediana
                 self.ultimo_guardado = time.time()
-        elif tasa < config.SEGURIDAD_MINIMA and os.path.exists(config.MODELO_SEGURO):
+        # Solo se vuelve a una copia guardada en esta ejecución: una antigua podría ser peor que el modelo actual
+        elif (tasa < config.SEGURIDAD_MINIMA or mas_lento) and self.ultimo_guardado:
             self.model.set_parameters(config.MODELO_SEGURO, device=self.model.device)
             self.vueltas += 1
             self.logger.record("mario/vueltas_al_seguro", self.vueltas)
-            print(f"\n🛟 Llegaba a la meta solo el {100 * tasa:.0f} %: vuelvo al último modelo seguro")
-            self.metas.clear()
+            motivo = (f"llegaba solo el {100 * tasa:.0f} %" if tasa < config.SEGURIDAD_MINIMA else
+                      f"la mediana subió a {mediana / 59.73:.2f} s (la copia: {self.mediana_segura / 59.73:.2f} s)")
+            print(f"\n🛟 {motivo}: vuelvo al último modelo seguro")
+            self.partidas.clear()
         return True

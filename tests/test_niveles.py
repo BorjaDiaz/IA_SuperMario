@@ -74,12 +74,12 @@ class QuedarseTests(unittest.TestCase):
         cb.model.get_env.return_value.env_method.assert_not_called()
 
 
-class RecompensaMetaTests(unittest.TestCase):
-    def test_each_second_saved_near_the_current_record_is_worth_several_points(self):
+class RecompensaTiempoTests(unittest.TestCase):
+    def test_each_second_saved_is_worth_about_three_points_anywhere_in_the_level(self):
         from mario.env import recompensa_meta
-        fps = 59.73
-        diferencia = recompensa_meta(21 * fps) - recompensa_meta(22 * fps)
-        self.assertGreaterEqual(diferencia, 3)
+        pasos_por_segundo = 59.73 / config.FRAMES_POR_ACCION
+        segundo = -config.REWARD_PASO * pasos_por_segundo + recompensa_meta(21 * 59.73) - recompensa_meta(22 * 59.73)
+        self.assertGreater(segundo, 2.5)
 
     def test_reaching_the_goal_always_pays_at_least_reward_meta(self):
         from mario.env import recompensa_meta
@@ -95,28 +95,50 @@ class SeguridadTests(unittest.TestCase):
         cb.model = mock.Mock(num_timesteps=0, device="cpu")
         return cb
 
-    def jugar(self, cb, metas, total):
-        infos = [{"motivo": "meta" if i < metas else "muerte", "nivel": "1-1", "practica": False}
+    def jugar(self, cb, metas, total=config.SEGURIDAD_VENTANA, frames=1300):
+        infos = [{"motivo": "meta" if i < metas else "muerte", "nivel": "1-1", "practica": False, "frames": frames}
                  for i in range(total)]
         cb.locals = {"infos": infos}
         cb.on_step()
 
     def test_saves_the_safe_model_while_it_reaches_the_goal_almost_always(self):
         cb = self.callback()
-        self.jugar(cb, 290, config.SEGURIDAD_VENTANA)  # 97 %
+        self.jugar(cb, 290)  # 97 %
         cb.model.save.assert_called_once_with(config.MODELO_SEGURO)
+        self.assertEqual(cb.mediana_segura, 1300)
         cb.model.set_parameters.assert_not_called()
 
-    def test_goes_back_to_the_safe_model_when_exploring_breaks_it(self):
+    def test_goes_back_to_the_safe_model_when_it_stops_reaching_the_goal(self):
         cb = self.callback()
-        with mock.patch("mario.callbacks.os.path.exists", return_value=True):
-            self.jugar(cb, 240, config.SEGURIDAD_VENTANA)  # 80 %
+        self.jugar(cb, 290)
+        self.jugar(cb, 240)  # 80 %
         cb.model.set_parameters.assert_called_once()
         self.assertEqual(cb.model.set_parameters.call_args.args[0], config.MODELO_SEGURO)
-        self.assertEqual(len(cb.metas), 0)  # vuelve a medir desde cero
+        self.assertEqual(len(cb.partidas), 0)  # vuelve a medir desde cero
+
+    def test_goes_back_to_the_safe_model_when_it_gets_slower(self):
+        cb = self.callback()
+        self.jugar(cb, 300, frames=1300)
+        self.jugar(cb, 300, frames=1400)  # llega siempre, pero un 7,7 % más lento
+        cb.model.set_parameters.assert_called_once()
+
+    def test_a_slower_model_does_not_replace_the_safe_copy(self):
+        cb = self.callback()
+        self.jugar(cb, 300, frames=1300)
+        cb.ultimo_guardado = 1  # hace mucho del último guardado
+        self.jugar(cb, 300, frames=1330)  # un 2 % más lento: ni se guarda ni se vuelve atrás
+        cb.model.save.assert_called_once()
+        cb.model.set_parameters.assert_not_called()
+
+    def test_never_goes_back_to_a_copy_from_an_earlier_run(self):
+        cb = self.callback()
+        with mock.patch("mario.callbacks.os.path.exists", return_value=True):
+            self.jugar(cb, 240)  # 80 %, pero en esta ejecución aún no hay copia
+        cb.model.set_parameters.assert_not_called()
 
     def test_practice_games_do_not_count(self):
         cb = self.callback()
-        cb.locals = {"infos": [{"motivo": "muerte", "nivel": "1-1", "practica": True}] * config.SEGURIDAD_VENTANA}
+        cb.locals = {"infos": [{"motivo": "muerte", "nivel": "1-1", "practica": True, "frames": 99}]
+                     * config.SEGURIDAD_VENTANA}
         cb.on_step()
-        self.assertEqual(len(cb.metas), 0)
+        self.assertEqual(len(cb.partidas), 0)

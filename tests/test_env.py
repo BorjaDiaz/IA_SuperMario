@@ -70,7 +70,7 @@ class MarioEnvTests(unittest.TestCase):
         self.assertEqual(info["motivo"], "meta")
         self.assertEqual(info["frames"], 1418)
         self.assertEqual(len(recompensas), len(acciones))
-        self.assertGreater(recompensas[-1], config.REWARD_META)
+        self.assertGreater(recompensas[-1], config.REWARD_META + config.REWARD_PASO)
 
     def test_same_actions_give_the_same_game(self):
         # ver_ia.py --record se basa en esto: el emulador es determinista y el azar del juego va en el state
