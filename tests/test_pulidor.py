@@ -3,6 +3,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 os.environ["MARIO_SIN_RECORDS"] = "1"
 os.environ["MARIO_RUN_DIR"] = tempfile.mkdtemp(prefix="test_mario_")
@@ -35,6 +36,14 @@ class PulidorTests(unittest.TestCase):
             pulidor.cerrar()
         self.assertLess(frames, 1418)  # una ruta lenta (búsqueda a lo bruto) siempre tiene fotogramas que ganar
         self.assertEqual(comprobar((1, 1), entradas), frames)
+
+    def test_checking_a_route_never_saves_it_as_a_record_itself(self):
+        # pulir.py lo guarda después como "pulidor"; si lo guardara la comprobación saldría como "Clon 121"
+        with open(META_1_1, encoding="utf-8") as f:
+            entradas = [b for b in json.load(f) for _ in range(4)]
+        with mock.patch.object(config, "GUARDAR_RECORDS", True),                 mock.patch("mario.env.guardar_record") as guardar:
+            self.assertEqual(comprobar((1, 1), entradas), 1418)
+        guardar.assert_not_called()
 
     def test_a_record_that_does_not_reach_the_goal_is_rejected(self):
         with self.assertRaises(ValueError):

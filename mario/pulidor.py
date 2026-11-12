@@ -153,7 +153,7 @@ def comprobar(nivel, entradas):
     """Repite la partida desde el inicio del nivel en un entorno limpio (un fotograma por paso).
     Devuelve los fotogramas de la meta, o None si no llega."""
     from mario.env import MarioEnv
-    env = MarioEnv(rank=121, nivel=nivel)
+    env = MarioEnv(rank=121, nivel=nivel, guardar_records=False)  # el récord lo guarda pulir.py como "pulidor"
     try:
         info = env.repetir(entradas, 1)
         return info["frames"] if info.get("motivo") == "meta" else None

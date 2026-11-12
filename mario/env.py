@@ -15,11 +15,13 @@ from mario import config
 
 
 class MarioEnv(gym.Env):
-    def __init__(self, rank=0, ventana=False, velocidad=0, nivel=None, practica=False):
+    def __init__(self, rank=0, ventana=False, velocidad=0, nivel=None, practica=False, guardar_records=True):
         """practica=True (solo el entrenamiento): algunos episodios empiezan en puntos de partidas propias que
-        llegaron a la meta (ver PRACTICA_PROB en config.py)."""
+        llegaron a la meta (ver PRACTICA_PROB en config.py). guardar_records=False: las metas no se apuntan como
+        récord (p. ej. al comprobar una partida que guardará otro, con su propio nombre)."""
         super().__init__()
         self.rank = rank
+        self.guardar_records = guardar_records
         self.practica = practica
         self.puntos_practica = deque(maxlen=config.PRACTICA_MAX)
         self.frames_tipicos = config.FRAMES_REFERENCIA  # su mejor meta: hasta dónde se reparten y filtran los puntos
@@ -229,7 +231,8 @@ class MarioEnv(gym.Env):
         """records.json guarda, por nivel, la partida más rápida: fotogramas y los botones de cada paso (no el
         número de acción, para que siga valiendo si cambia la lista de ACCIONES). El emulador es determinista,
         así que ver_ia.py --record la repite exactamente."""
-        guardar_record(self.nivel, self.frames, self.acciones, self.frames_por_accion, f"Clon {self.rank}")
+        if self.guardar_records:
+            guardar_record(self.nivel, self.frames, self.acciones, self.frames_por_accion, f"Clon {self.rank}")
 
 
 def guardar_record(nivel, frames, botones, frames_por_accion, origen):
