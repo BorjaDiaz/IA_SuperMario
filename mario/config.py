@@ -71,6 +71,14 @@ ADDR_VIDAS = 0xC17F
 # Estado de Mario (0xC1C1): 0 en el suelo, 1 en el aire, 19 rebota al pisar a un enemigo, 16 entra andando
 # (inicio del 1-2), 5 se agarra al mástil (meta), 3 golpe mortal, 17 cae a un foso. La muerte y la meta se ven
 # en su fotograma exacto; las vidas bajan cientos de fotogramas después, ya en el mapa
+# Lo que pasa tras el mástil (medido retrasando 0-63 fotogramas la ruta del récord del 1-1, 2026-11-12):
+# - No hay "frame rule" como en NES (comprobar el final cada 21 fotogramas): el 1-2 empieza ~831 fotogramas después
+#   del mástil, así que cada fotograma ganado cuenta casi entero (el recuento del tiempo sobrante dura ~2 fotogramas
+#   más por cada unidad del reloj que sobre).
+# - Fuegos artificiales: si el reloj del juego acaba en ciertas cifras al tocar el mástil (con 346 sí, con 347 no),
+#   hay fuegos y el siguiente nivel empieza ~212 fotogramas (3,5 s) más tarde. En partida completa importa más evitarlos
+#   que unos pocos fotogramas: allí habría que medir hasta que empieza el nivel siguiente, no hasta el mástil.
+# - Paridad: la ruta solo funciona con retrasos pares; con uno impar Mario muere (parte del juego va cada 2 fotogramas).
 ADDR_ESTADO = 0xC1C1
 ESTADO_META = 5
 ESTADOS_MUERTE = (3, 17)
