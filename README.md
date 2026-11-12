@@ -25,7 +25,7 @@ Después, desde esta carpeta:
 | Ver una partida guardada (p. ej. la del test, que llega al mástil del 1-1) | `.venv\Scripts\python.exe ver_ia.py --acciones tests\datos\meta_1-1.json` |
 | Ver varios clones a la vez (último checkpoint, sirve mientras entrena) | `.venv\Scripts\python.exe ver_clones.py --clones 6` |
 | Vídeo MP4 del récord (train.py lo graba solo en `videos/` con cada récord nuevo) | `.venv\Scripts\python.exe video.py --nivel 1-1` |
-| Pulir el récord con una búsqueda tipo TAS (fotograma a fotograma, todos los hilos) | `.venvScriptspython.exe pulir.py --nivel 1-1 --minutos 60` |
+| Pulir el récord con una búsqueda tipo TAS (fotograma a fotograma, todos los hilos) | `.venv\Scripts\python.exe pulir.py --nivel 1-1 --minutos 60` |
 | Repetir exactamente el récord | `.venv\Scripts\python.exe ver_ia.py --record --nivel 1-1` |
 | Tests | `.venv\Scripts\python.exe -m unittest discover -s tests -t .` |
 | TensorBoard | `.venv\Scripts\tensorboard.exe --logdir runs` |
