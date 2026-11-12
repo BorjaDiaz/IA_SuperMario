@@ -66,6 +66,7 @@ FRAMES_POR_ACCION = 4
 # RAM medida en el emulador (capturas en cada cambio). X de Mario en el nivel = página * 256 + x
 ADDR_X_PAGINA = 0xC1CB
 ADDR_X = 0xC1CA
+ADDR_Y = 0xC1CC               # altura de Mario en pantalla (crece hacia abajo; 208 = de pie en el suelo del 1-1)
 ADDR_VIDAS = 0xC17F
 # Estado de Mario (0xC1C1): 0 en el suelo, 1 en el aire, 19 rebota al pisar a un enemigo, 16 entra andando
 # (inicio del 1-2), 5 se agarra al mástil (meta), 3 golpe mortal, 17 cae a un foso. La muerte y la meta se ven

@@ -229,23 +229,28 @@ class MarioEnv(gym.Env):
         """records.json guarda, por nivel, la partida más rápida: fotogramas y los botones de cada paso (no el
         número de acción, para que siga valiendo si cambia la lista de ACCIONES). El emulador es determinista,
         así que ver_ia.py --record la repite exactamente."""
-        if not config.GUARDAR_RECORDS:
-            return
-        nivel = config.nombre_nivel(self.nivel)
-        records = cargar_records()
-        anterior = records.get(nivel, {}).get("frames")
-        if anterior is not None and self.frames >= anterior:
-            return
-        records[nivel] = {"frames": self.frames, "segundos": round(self.frames / 59.73, 2),
-                          "frames_por_accion": self.frames_por_accion,
-                          "botones": self.acciones, "clon": self.rank,
-                          "run": os.path.basename(config.RUN_DIR), "fecha": time.strftime("%Y-%m-%d %H:%M:%S")}
-        tmp = f"{config.RECORDS_PATH}.{self.rank}.tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(records, f)
-        os.replace(tmp, config.RECORDS_PATH)
-        antes = f" (antes {anterior / 59.73:.2f} s)" if anterior else ""
-        print(f"🏆 [Clon {self.rank}] ¡Récord en el {nivel}! {self.frames / 59.73:.2f} s{antes}")
+        guardar_record(self.nivel, self.frames, self.acciones, self.frames_por_accion, f"Clon {self.rank}")
+
+
+def guardar_record(nivel, frames, botones, frames_por_accion, origen):
+    """Guarda la partida en records.json si es la más rápida del nivel. Devuelve True si lo era."""
+    if not config.GUARDAR_RECORDS:
+        return False
+    nombre = config.nombre_nivel(nivel)
+    records = cargar_records()
+    anterior = records.get(nombre, {}).get("frames")
+    if anterior is not None and frames >= anterior:
+        return False
+    records[nombre] = {"frames": frames, "segundos": round(frames / 59.73, 2), "frames_por_accion": frames_por_accion,
+                       "botones": botones, "clon": origen, "run": os.path.basename(config.RUN_DIR),
+                       "fecha": time.strftime("%Y-%m-%d %H:%M:%S")}
+    tmp = f"{config.RECORDS_PATH}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(records, f)
+    os.replace(tmp, config.RECORDS_PATH)
+    antes = f" (antes {anterior / 59.73:.2f} s)" if anterior else ""
+    print(f"🏆 [{origen}] ¡Récord en el {nombre}! {frames / 59.73:.2f} s{antes}", flush=True)
+    return True
 
 
 def recompensa_meta(frames):
