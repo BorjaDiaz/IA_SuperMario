@@ -35,9 +35,11 @@ Después, desde esta carpeta:
   los menús y el de cada nivel siguiente repitiendo el récord del anterior hasta el mástil. `train.py` repite un nivel hasta agotarlo (llega a la
   meta en el 80 % de los últimos 100 episodios y lleva `PASOS_SIN_MEJORA` pasos sin récord), lo apunta en
   `niveles.json` y sigue con el siguiente usando el mismo modelo. Al relanzarlo continúa por el primero pendiente.
-- Búsqueda de trucos: acciones de 2 fotogramas con 15 combinaciones de botones, exploración alta y **práctica**:
-  cada clon guarda puntos de sus partidas que llegan a la meta y en un 25 % de los episodios empieza en uno de ellos
-  (con el tiempo contado desde el inicio real). Esas partidas no dan récords ni cuentan en las estadísticas.
+- **Práctica**: cada clon guarda puntos de sus partidas más rápidas que llegan a la meta (y del récord del nivel) y
+  en un 25 % de los episodios empieza en uno de ellos, con el tiempo contado desde el inicio real. Esas partidas no
+  dan récords ni cuentan en las estadísticas.
+- **Pulidor** (`pulir.py`): búsqueda tipo TAS que retoca el récord fotograma a fotograma y se queda con lo que
+  hace empezar antes el nivel siguiente. Cada mejora se comprueba repitiéndola desde el inicio del nivel.
 - El tiempo de un nivel se cuenta hasta el primer fotograma del nivel siguiente (`frames` en `records.json`;
   `frames_meta` es el del mástil). En el 1-1, tras el mástil pasan ~831 fotogramas, o ~1.043 con fuegos artificiales.
 - `mario/env.py`: el entorno. Lee de la RAM la X de Mario (avance) y su estado (5 = mástil, 3/17 = muerte), medidos
