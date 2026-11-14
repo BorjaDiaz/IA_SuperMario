@@ -38,6 +38,8 @@ Después, desde esta carpeta:
 - Búsqueda de trucos: acciones de 2 fotogramas con 15 combinaciones de botones, exploración alta y **práctica**:
   cada clon guarda puntos de sus partidas que llegan a la meta y en un 25 % de los episodios empieza en uno de ellos
   (con el tiempo contado desde el inicio real). Esas partidas no dan récords ni cuentan en las estadísticas.
+- El tiempo de un nivel se cuenta hasta el primer fotograma del nivel siguiente (`frames` en `records.json`;
+  `frames_meta` es el del mástil). En el 1-1, tras el mástil pasan ~831 fotogramas, o ~1.043 con fuegos artificiales.
 - `mario/env.py`: el entorno. Lee de la RAM la X de Mario (avance) y su estado (5 = mástil, 3/17 = muerte), medidos
   en el emulador y anotados en `config.py`. Cada récord guarda en `records.json` sus acciones; el emulador es
   determinista y el azar del juego va en el state, así que `ver_ia.py --record` lo repite igual.

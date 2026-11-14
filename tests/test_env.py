@@ -15,7 +15,7 @@ from mario.env import MarioEnv
 
 NADA, DERECHA, SALTO, CORRER, SALTO_CORRIENDO = (), ("right",), ("right", "a"), ("right", "b"), ("right", "a", "b")
 # Botones de una partida que llega al mástil del 1-1 con pasos de 4 fotogramas (encontrada con una búsqueda a lo
-# bruto, no con la IA): se agarra en el fotograma 1418; el juego no vuelve al mapa hasta cientos de fotogramas después
+# bruto, no con la IA): se agarra al mástil en el fotograma 1418 y el 1-2 empieza en el 2293 (pasos de 4 fotogramas)
 META_1_1 = os.path.join(os.path.dirname(__file__), "datos", "meta_1-1.json")
 
 
@@ -77,9 +77,13 @@ class MarioEnvTests(unittest.TestCase):
             acciones = json.load(f)
         recompensas, info, _ = self.jugar(acciones, 4)
         self.assertEqual(info["motivo"], "meta")
-        self.assertEqual(info["frames"], 1418)
+        self.assertEqual(info["frames_meta"], 1418)
+        # El tiempo del nivel cuenta hasta que empieza el siguiente, y el emulador queda en su primer fotograma
+        self.assertEqual(info["frames"], 2293)
+        self.assertTrue(info["siguiente"])
+        self.assertEqual(self.env.x(), 32)
         self.assertEqual(len(recompensas), len(acciones))
-        self.assertGreater(recompensas[-1], config.REWARD_META + config.REWARD_PASO)
+        self.assertGreater(recompensas[-1], config.REWARD_META / 2)  # menos el tiempo hasta el nivel siguiente
 
     def test_same_actions_give_the_same_game(self):
         # ver_ia.py --record se basa en esto: el emulador es determinista y el azar del juego va en el state
@@ -129,7 +133,8 @@ class PracticaTests(unittest.TestCase):
             env.close()
 
     def test_practice_starts_with_points_from_the_level_record(self):
-        self.records.return_value = {"1-1": {"botones": self.acciones, "frames_por_accion": 4, "frames": 1418}}
+        self.records.return_value = {"1-1": {"botones": self.acciones, "frames_por_accion": 4, "frames": 2293,
+                                             "frames_meta": 1418}}
         env = MarioEnv(rank=99, practica=True)
         try:
             env.reset()
@@ -143,7 +148,7 @@ class PracticaTests(unittest.TestCase):
                 _, _, fin, _, info = env.paso(b, 4)
                 if fin:
                     break
-            self.assertEqual((info["motivo"], info["frames"]), ("meta", 1418))
+            self.assertEqual((info["motivo"], info["frames_meta"], info["frames"]), ("meta", 1418, 2293))
         finally:
             env.close()
 
@@ -151,11 +156,11 @@ class PracticaTests(unittest.TestCase):
         env = MarioEnv(rank=99, practica=True)
         try:
             env.reset()
-            env.frames_tipicos = 1300  # su mejor meta: 1418 es más de un 3 % peor
+            env.frames_tipicos = 2100  # su mejor tiempo: 2293 es más de un 3 % peor
             env.rng.randint = lambda a, b: 600
             env.repetir(self.acciones, 4)
             self.assertEqual(len(env.puntos_practica), 0)
-            env.frames_tipicos = 1400  # ahora 1418 está dentro del margen
+            env.frames_tipicos = 2280  # ahora 2293 está dentro del margen
             env.repetir(self.acciones, 4)
             self.assertEqual(len(env.puntos_practica), 1)
         finally:
@@ -174,7 +179,8 @@ class PracticaTests(unittest.TestCase):
                     _, _, fin, _, info = env.paso(b, 4)
                     if fin:
                         break
-            self.assertEqual((info["motivo"], info["frames"], info["practica"]), ("meta", 1418, True))
+            self.assertEqual((info["motivo"], info["frames_meta"], info["frames"], info["practica"]),
+                             ("meta", 1418, 2293, True))
             guardar.assert_not_called()
         finally:
             env.close()

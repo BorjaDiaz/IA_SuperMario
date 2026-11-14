@@ -17,13 +17,13 @@ os.environ["MARIO_RUN_DIR"] = tempfile.mkdtemp(prefix="video_mario_")
 import imageio.v2 as imageio
 import numpy as np
 
-from mario import config
+from mario import config, states
 from mario.env import MarioEnv, cargar_records
 
 VIDEOS_DIR = os.path.join(config.BASE_DIR, "videos")
 FPS = 60
 ESCALA = 3                    # 160x144 -> 480x432
-FOTOGRAMAS_TRAS_LA_META = 90  # 1,5 s más para ver la bajada por el mástil
+FOTOGRAMAS_TRAS_LA_META = 60  # 1 s del nivel siguiente, para ver que ha empezado
 
 
 def grabar(nivel):
@@ -51,15 +51,19 @@ def grabar(nivel):
                     fotograma()
                     if meta is None and env.pb.memory[config.ADDR_ESTADO] == config.ESTADO_META:
                         meta = fotogramas
+            # Lo de después del mástil también cuenta en el tiempo: se graba hasta que empieza el nivel siguiente
             env._soltar_todo()
+            tras_meta = states.hasta_el_nivel_siguiente(env.pb, fotograma) if meta else None
             for _ in range(FOTOGRAMAS_TRAS_LA_META):
                 env.pb.tick(1, True)
                 fotograma()
     finally:
         env.close()
-    if meta != record["frames"]:
+    total = fotogramas + tras_meta if meta and tras_meta else None  # el mástil pudo ser a mitad del último paso
+    if (meta, total) != (record["frames_meta"], record["frames"]):
         os.remove(tmp)
-        sys.exit(f"Al repetirlo la meta llega en el fotograma {meta}, no en el {record['frames']}: vídeo descartado")
+        sys.exit(f"Al repetirlo sale mástil {meta} y total {total}, no {record['frames_meta']} y {record['frames']}: "
+                 "vídeo descartado")
     os.replace(tmp, ruta)
     print(f"🎬 {ruta}")
     return ruta

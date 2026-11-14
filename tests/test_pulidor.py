@@ -23,8 +23,8 @@ class PulidorTests(unittest.TestCase):
     def test_seeds_with_the_record_at_its_exact_frame(self):
         pulidor = Pulidor((1, 1), self.record, semilla=1)
         try:
-            self.assertEqual(pulidor.mejor_frames, 1418)
-            self.assertEqual(len(pulidor.entradas), 1418)  # una entrada por fotograma
+            self.assertEqual(pulidor.mejor_frames, 2293)   # hasta que empieza el 1-2
+            self.assertEqual(len(pulidor.entradas), 1418)  # una entrada por fotograma, hasta el mástil
         finally:
             pulidor.cerrar()
 
@@ -34,7 +34,7 @@ class PulidorTests(unittest.TestCase):
             frames, entradas = pulidor.buscar(iteraciones=60)
         finally:
             pulidor.cerrar()
-        self.assertLess(frames, 1418)  # una ruta lenta (búsqueda a lo bruto) siempre tiene fotogramas que ganar
+        self.assertLess(frames, 2293)  # una ruta lenta (búsqueda a lo bruto) siempre tiene fotogramas que ganar
         self.assertEqual(comprobar((1, 1), entradas), frames)
 
     def test_checking_a_route_never_saves_it_as_a_record_itself(self):
@@ -42,7 +42,7 @@ class PulidorTests(unittest.TestCase):
         with open(META_1_1, encoding="utf-8") as f:
             entradas = [b for b in json.load(f) for _ in range(4)]
         with mock.patch.object(config, "GUARDAR_RECORDS", True),                 mock.patch("mario.env.guardar_record") as guardar:
-            self.assertEqual(comprobar((1, 1), entradas), 1418)
+            self.assertEqual(comprobar((1, 1), entradas), 2293)
         guardar.assert_not_called()
 
     def test_a_record_that_does_not_reach_the_goal_is_rejected(self):

@@ -11,7 +11,7 @@ import numpy as np
 from gymnasium import spaces
 from pyboy import PyBoy
 
-from mario import config
+from mario import config, states
 
 
 class MarioEnv(gym.Env):
@@ -24,7 +24,8 @@ class MarioEnv(gym.Env):
         self.guardar_records = guardar_records
         self.practica = practica
         self.puntos_practica = deque(maxlen=config.PRACTICA_MAX)
-        self.frames_tipicos = config.FRAMES_REFERENCIA  # su mejor meta: hasta dónde se reparten y filtran los puntos
+        self.frames_tipicos = float("inf")  # su mejor tiempo del nivel: filtra de qué partidas se practica
+        self.meta_tipica = config.FRAMES_HASTA_META  # fotograma de su última meta: hasta dónde se reparten los puntos
         self.rng = random.Random(time.time_ns() + rank)
         self.pb = PyBoy(config.ROM_PATH, window="SDL2" if ventana else "null", sound_emulated=False)
         self.pb.set_emulation_speed(velocidad)
@@ -62,10 +63,10 @@ class MarioEnv(gym.Env):
         self.frames = punto[1] if punto else 0  # el tiempo cuenta desde el inicio real del nivel
         self.candidatos_practica = []
         # Un punto por partida, en un fotograma al azar hasta donde suele llegar a la meta
-        self.proximo_punto = self.frames + self.rng.randint(60, max(120, self.frames_tipicos - self.frames))
+        self.proximo_punto = self.frames + self.rng.randint(60, max(120, self.meta_tipica - self.frames))
         self.pasos_sin_avance = 0
         self.vidas = self.pb.memory[config.ADDR_VIDAS]
-        self.frame_meta = None
+        self.frame_meta = self.frames_tras_meta = None
         self.progreso_inicio = self.progreso_max = self.x()
         self.progreso_anterior = self.progreso_max
         self.recompensa_total = 0.0
@@ -119,12 +120,18 @@ class MarioEnv(gym.Env):
             reward += config.PENALTY_MUERTE
         elif self.frame_meta is not None:
             motivo = "meta"
-            self.frames = self.frame_meta
-            reward += recompensa_meta(self.frames)
+            # El tiempo del nivel cuenta hasta que empieza el siguiente (bandera, recuento, fuegos artificiales,
+            # mapa): se juega ese tramo aquí mismo. Si no hay nivel siguiente, cuenta el máximo
+            self._soltar_todo()
+            self.frames_tras_meta = states.hasta_el_nivel_siguiente(self.pb)
+            tras_meta = self.frames_tras_meta or states.MAX_FOTOGRAMAS_TRAS_META
+            self.frames += tras_meta  # desde el final de este paso (el mástil pudo ser a mitad de paso)
+            reward += recompensa_meta(tras_meta)
             # Solo puntos de partidas que llegan, y no mucho más lentas que la mejor del clon
             if self.frames <= self.frames_tipicos * (1 + config.PRACTICA_MARGEN):
                 self.puntos_practica.extend(self.candidatos_practica)
             self.frames_tipicos = min(self.frames_tipicos, self.frames)
+            self.meta_tipica = self.frame_meta
             if not self.es_practica:
                 self._guardar_si_es_record()
         elif self.pasos_sin_avance >= config.MAX_PASOS_SIN_AVANCE:
@@ -135,7 +142,8 @@ class MarioEnv(gym.Env):
         info = {}
         if motivo:
             info = {"motivo": motivo, "nivel": config.nombre_nivel(self.nivel), "frames": self.frames,
-                    "progreso": self.progreso_max - self.progreso_inicio, "practica": self.es_practica}
+                    "progreso": self.progreso_max - self.progreso_inicio, "practica": self.es_practica,
+                    "frames_meta": self.frame_meta, "siguiente": self.frames_tras_meta is not None}
             self._registrar_episodio(motivo)
         return self._obs(), reward, motivo is not None, False, info
 
@@ -180,6 +188,7 @@ class MarioEnv(gym.Env):
         if not record:
             return
         self.frames_tipicos = record["frames"]
+        self.meta_tipica = record["frames_meta"]
         self.state.seek(0)
         self.pb.load_state(self.state)
         frames, proximo = 0, config.PRACTICA_CADA_FRAMES
@@ -221,7 +230,8 @@ class MarioEnv(gym.Env):
 
     def _registrar_episodio(self, motivo):
         fila = {"rank": self.rank, "episodio": self.episodio, "motivo": motivo, "pasos": self.pasos,
-                "frames": self.frames, "progreso": self.progreso_max - self.progreso_inicio,
+                "frames": self.frames, "frames_meta": self.frame_meta,
+                "progreso": self.progreso_max - self.progreso_inicio,
                 "recompensa": round(self.recompensa_total, 3), "practica": self.es_practica,
                 "nivel": config.nombre_nivel(self.nivel), "timestamp": round(time.time(), 1)}
         with open(self.metricas_path, "a", encoding="utf-8") as f:
@@ -231,12 +241,15 @@ class MarioEnv(gym.Env):
         """records.json guarda, por nivel, la partida más rápida: fotogramas y los botones de cada paso (no el
         número de acción, para que siga valiendo si cambia la lista de ACCIONES). El emulador es determinista,
         así que ver_ia.py --record la repite exactamente."""
-        if self.guardar_records:
-            guardar_record(self.nivel, self.frames, self.acciones, self.frames_por_accion, f"Clon {self.rank}")
+        if self.guardar_records and self.frames_tras_meta is not None:
+            guardar_record(self.nivel, self.frames, self.frame_meta, self.acciones, self.frames_por_accion,
+                           f"Clon {self.rank}")
 
 
-def guardar_record(nivel, frames, botones, frames_por_accion, origen):
-    """Guarda la partida en records.json si es la más rápida del nivel. Devuelve True si lo era."""
+def guardar_record(nivel, frames, frames_meta, botones, frames_por_accion, origen):
+    """Guarda la partida en records.json si es la más rápida del nivel. Devuelve True si lo era.
+    frames: desde el inicio del nivel hasta que empieza el siguiente (lo que se compara). frames_meta: hasta
+    agarrar el mástil (los botones llegan hasta ahí; el resto es la rutina de states.hasta_el_nivel_siguiente)."""
     if not config.GUARDAR_RECORDS:
         return False
     nombre = config.nombre_nivel(nivel)
@@ -244,7 +257,8 @@ def guardar_record(nivel, frames, botones, frames_por_accion, origen):
     anterior = records.get(nombre, {}).get("frames")
     if anterior is not None and frames >= anterior:
         return False
-    records[nombre] = {"frames": frames, "segundos": round(frames / 59.73, 2), "frames_por_accion": frames_por_accion,
+    records[nombre] = {"frames": frames, "segundos": round(frames / 59.73, 2), "frames_meta": frames_meta,
+                       "segundos_meta": round(frames_meta / 59.73, 2), "frames_por_accion": frames_por_accion,
                        "botones": botones, "clon": origen, "run": os.path.basename(config.RUN_DIR),
                        "fecha": time.strftime("%Y-%m-%d %H:%M:%S")}
     tmp = f"{config.RECORDS_PATH}.{os.getpid()}.tmp"
@@ -256,10 +270,10 @@ def guardar_record(nivel, frames, botones, frames_por_accion, origen):
     return True
 
 
-def recompensa_meta(frames):
-    """Llegar da REWARD_META; llegar antes, hasta REWARD_META_RAPIDEZ más (lineal hasta FRAMES_REFERENCIA)."""
-    rapidez = max(0.0, 1 - frames / config.FRAMES_REFERENCIA)
-    return config.REWARD_META + config.REWARD_META_RAPIDEZ * rapidez
+def recompensa_meta(frames_tras_meta):
+    """Llegar da REWARD_META menos el tiempo que pasa hasta que empieza el nivel siguiente, cobrado al mismo precio
+    que el resto de la partida (REWARD_PASO por cada FRAMES_POR_ACCION fotogramas)."""
+    return config.REWARD_META + config.REWARD_PASO * frames_tras_meta / config.FRAMES_POR_ACCION
 
 
 def cargar_records():

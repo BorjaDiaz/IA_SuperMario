@@ -76,14 +76,18 @@ class QuedarseTests(unittest.TestCase):
 
 class RecompensaTiempoTests(unittest.TestCase):
     def test_each_second_saved_is_worth_about_three_points_anywhere_in_the_level(self):
-        from mario.env import recompensa_meta
         pasos_por_segundo = 59.73 / config.FRAMES_POR_ACCION
-        segundo = -config.REWARD_PASO * pasos_por_segundo + recompensa_meta(21 * 59.73) - recompensa_meta(22 * 59.73)
-        self.assertGreater(segundo, 2.5)
+        self.assertGreater(-config.REWARD_PASO * pasos_por_segundo, 2.5)
 
-    def test_reaching_the_goal_always_pays_at_least_reward_meta(self):
+    def test_time_after_the_flag_costs_the_same_as_time_before_it(self):
         from mario.env import recompensa_meta
-        self.assertEqual(recompensa_meta(10 * config.FRAMES_REFERENCIA), config.REWARD_META)
+        # Fuegos artificiales en el 1-1: 1.043 fotogramas tras el mástil en vez de 831
+        coste = recompensa_meta(831) - recompensa_meta(1043)
+        self.assertAlmostEqual(coste, -config.REWARD_PASO * 212 / config.FRAMES_POR_ACCION)
+
+    def test_reaching_the_goal_still_pays_with_fireworks(self):
+        from mario.env import recompensa_meta
+        self.assertGreater(recompensa_meta(1043), 0)
 
 
 class SeguridadTests(unittest.TestCase):

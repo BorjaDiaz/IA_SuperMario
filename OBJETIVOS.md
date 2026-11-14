@@ -11,7 +11,9 @@ mejor tiempo total.
 ## Qué cuenta como éxito, en orden
 1. **Llegar a la meta** del nivel de forma fiable (≥ 80 % de los episodios).
 2. **Bajar el tiempo**: cada récord de `records.json` es una partida real y repetible
-   (`ver_ia.py --record`). Medimos en fotogramas, no en el reloj del juego.
+   (`ver_ia.py --record`). Medimos en fotogramas, no en el reloj del juego, y cada nivel **hasta que empieza
+   el siguiente** (no hasta el mástil): así cuentan los fuegos artificiales y todo lo que retrase la partida real.
+   Un récord puede venir de la IA o del pulidor (`pulir.py`, búsqueda fotograma a fotograma sobre una ruta de la IA).
 3. **Descubrir algo inesperado**: un atajo, un salto que se salta un tramo, un uso raro de enemigos,
    tuberías o la física. Si aparece, se documenta con el récord que lo contiene.
 4. Repetirlo en cada nivel y después encadenar el juego completo.
@@ -30,7 +32,7 @@ mejor tiempo total.
   escribiendo memoria). Solo se leen datos.
 
 ## Cómo se trabaja
-- Antes de cambiar recompensas, explica el problema con datos (`analisis.py`, `metrics.jsonl`,
+- Antes de cambiar recompensas, explica el problema con datos (`analisis.py`, `runs/<fecha>/metricas/`,
   TensorBoard) y comprueba el cambio en el emulador.
 - Las pruebas no escriben `records.json` (`MARIO_SIN_RECORDS=1`).
 - No lanzar ni parar entrenamientos que haya lanzado el usuario sin preguntar; para parar, el archivo

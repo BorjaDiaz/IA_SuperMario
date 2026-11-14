@@ -3,6 +3,7 @@
 Uso (desde la carpeta "SuperMario"):
     .venv\\Scripts\\python.exe pulir.py                        # 1-1, 60 minutos, un proceso por hilo de la CPU
     .venv\\Scripts\\python.exe pulir.py --minutos 180 --procesos 6
+El tiempo que se pule es el del nivel hasta que empieza el siguiente (cuentan los fuegos artificiales).
 Trabaja por rondas: en cada una, todos los procesos parten del mejor tiempo hasta ese momento. Cada mejora se
 comprueba repitiendo la partida desde el inicio del nivel, se guarda en records.json y se graba su vídeo.
 Ctrl+C para parar (lo ya mejorado queda guardado). Si a la vez se entrena, conviene usar menos procesos.
@@ -65,7 +66,7 @@ def main():
                 if comprobar(nivel, entradas) != frames:
                     print("  ⚠️ la mejora no se repite igual desde el inicio: descartada", flush=True)
                     continue
-                guardar_record(nivel, frames, [list(e) for e in entradas], 1, "pulidor")
+                guardar_record(nivel, frames, len(entradas), [list(e) for e in entradas], 1, "pulidor")
                 record = cargar_records()[nombre]
                 subprocess.Popen([sys.executable, os.path.join(config.BASE_DIR, "video.py"), "--nivel", nombre],
                                  cwd=config.BASE_DIR, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

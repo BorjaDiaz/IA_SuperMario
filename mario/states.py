@@ -40,6 +40,34 @@ def entrar_desde_el_mapa(pb):
     return False
 
 
+BOTONES = ("up", "down", "left", "right", "a", "b")
+MAX_FOTOGRAMAS_TRAS_META = 1500  # con fuegos artificiales el 1-1 tarda 1.043
+
+
+def hasta_el_nivel_siguiente(pb, cada_fotograma=None):
+    """Desde que Mario se agarra al mástil hasta el primer fotograma del nivel siguiente: bajada de la bandera,
+    recuento del tiempo, fuegos artificiales si los hay, mapa y carga. Suelta todo y pulsa A fotograma sí,
+    fotograma no (lo único que hace falta es pasar el mapa). Devuelve los fotogramas que tarda, o None si el
+    nivel siguiente no empieza (p. ej. tras el último nivel). Es la misma rutina para la IA, el pulidor, los
+    vídeos y los states, así que todos miden igual."""
+    for b in BOTONES:
+        pb.button_release(b)
+    x_antes, a = _x(pb), False
+    for fotogramas in range(1, MAX_FOTOGRAMAS_TRAS_META + 1):
+        a = not a
+        (pb.button_press if a else pb.button_release)("a")
+        pb.tick(1, cada_fotograma is not None)
+        if cada_fotograma:
+            cada_fotograma()
+        x = _x(pb)
+        if x == 32 and x_antes != 32:
+            pb.button_release("a")
+            return fotogramas
+        x_antes = x
+    pb.button_release("a")
+    return None
+
+
 def crear_primero():
     pb = PyBoy(config.ROM_PATH, window="null", sound_emulated=False)
     try:
@@ -60,13 +88,11 @@ def crear_siguiente(nivel, botones, frames_por_accion):
     Devuelve ese nivel, o None si la partida no llega a la meta."""
     from mario.env import MarioEnv  # evita la importación circular (env no depende de este módulo)
     siguiente = config.NIVELES[config.NIVELES.index(tuple(nivel)) + 1]
-    env = MarioEnv(rank=98, nivel=nivel)
+    env = MarioEnv(rank=98, nivel=nivel, guardar_records=False)
     try:
         info = env.repetir(botones, frames_por_accion)
-        if info.get("motivo") != "meta":
-            return None
-        env._soltar_todo()
-        if not entrar_desde_el_mapa(env.pb):
+        # Al llegar a la meta el entorno ya juega hasta el primer fotograma del nivel siguiente: ese es el state
+        if info.get("motivo") != "meta" or not info.get("siguiente"):
             return None
         _guardar(env.pb, siguiente)
         return siguiente

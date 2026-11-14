@@ -99,11 +99,13 @@ MAX_PIXELES_POR_PASO = 40     # un salto mayor en un paso es una lectura rara (c
 # (0,995^336), PPO reparte el mérito hacia atrás con (0,995·0,95)^pasos (0,4 % a 100 pasos de la meta) y la IA no
 # ve en pantalla el tiempo exacto que lleva, así que ese bonus le llegaba como ruido. Cobrado paso a paso, cada paso
 # perdido cuesta al momento y en cualquier punto del nivel: -0,2 por paso ≈ 3 puntos por segundo.
-# Llegar sigue compensando siempre: terminar el 1-1 en ~22 s da ~+78 en total; morir aposta al principio, ~-8
+# Llegar sigue compensando siempre: terminar el 1-1 en ~21,5 s da ~+87 en total; morir aposta al principio, ~-8
 REWARD_PASO = -0.2            # cada paso cuesta: cuanto antes llegue, mejor
-REWARD_META = 50.0            # nivel completado...
-REWARD_META_RAPIDEZ = 0.0     # ...más hasta esto según lo rápido (lineal hasta FRAMES_REFERENCIA); ya va en REWARD_PASO
-FRAMES_REFERENCIA = 3000      # ~50 s de juego: tardar esto o más no da bonus de rapidez
+# El tiempo de un nivel cuenta hasta que empieza el siguiente, no hasta el mástil: lo que pasa después (bandera,
+# recuento, fuegos artificiales, mapa) se cobra al llegar, al mismo precio por fotograma. En el 1-1 son ~831
+# fotogramas (-41,5) o ~1.043 con fuegos artificiales (-52): llegar deja ~+58 o ~+48
+REWARD_META = 100.0           # nivel completado (menos el tiempo hasta el nivel siguiente)
+FRAMES_HASTA_META = 1500      # sin récord aún: hasta dónde se reparten los primeros puntos de práctica (~25 s)
 PENALTY_MUERTE = -10.0
 # Atascarse tiene que salir más caro que morir AUN DESCONTADO (llega al final, gamma^pasos): con -1 y 300 pasos la
 # IA se quedaba quieta ante las tuberías del 1-1, y con -10 seguía parada al borde del primer foso (84 % de atascos;
