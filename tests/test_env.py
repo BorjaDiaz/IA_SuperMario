@@ -57,6 +57,15 @@ class MarioEnvTests(unittest.TestCase):
         self.assertEqual(len(quieto), config.MAX_PASOS_SIN_AVANCE)
         self.assertLessEqual(sum(quieto), sum(muerte))
 
+    def test_getting_further_before_dying_is_never_worse(self):
+        # Si avanzar costara más de lo que paga, una IA que aún no llega a la meta aprendería a morir cuanto antes
+        with open(META_1_1, encoding="utf-8") as f:
+            ruta = json.load(f)
+        recompensas, _, _ = self.jugar(ruta, 4)
+        totales = [sum(recompensas[:n]) + config.PENALTY_MUERTE for n in (41, 100, 200, 300)]  # morir tras n pasos
+        self.assertEqual(totales, sorted(totales))
+        self.assertGreater(sum(recompensas), totales[-1])  # y llegar a la meta, mejor que todo eso
+
     def test_walking_into_the_first_goomba_is_a_death_at_the_hit(self):
         # Termina en el paso del golpe; las vidas no bajan hasta volver al mapa, cientos de fotogramas después
         _, info, _ = self.jugar([DERECHA] * 2000)

@@ -88,14 +88,18 @@ ESTADOS_MUERTE = (3, 17)
 # ==========================================
 # Solo se indica QUÉ conseguir, nunca POR DÓNDE: así cualquier atajo o truco que lleve antes a la meta
 # se premia solo
-REWARD_PIXEL = 0.01           # por cada píxel más lejos que nunca en el episodio (mástil del 1-1 ≈ x 3.130 ≈ +31)
+# Avanzar corriendo (~10 px por paso) tiene que pagar más que lo que cuesta el paso (REWARD_PASO): con 0,01 y -0,2
+# cada paso de carrera salía a -0,1 y, para una IA que aún no llega a la meta, morir cuanto antes era lo mejor
+# (medido: morir en x=377 daba -14,8; en x=2.694, -43,4). Con 0,03 sale a +0,1. La suma por avanzar es la misma en
+# toda partida que llega, así que no cambia qué ruta es la más rápida
+REWARD_PIXEL = 0.03           # por cada píxel más lejos que nunca en el episodio (mástil del 1-1 ≈ x 3.130 ≈ +93)
 MAX_PIXELES_POR_PASO = 40     # un salto mayor en un paso es una lectura rara (cambio de zona): no se premia
 # El tiempo se cobra en cada paso, no al llegar. Un bonus de rapidez en la meta (+200 en 3.000 fotogramas, ~4 pts
 # por segundo) apenas enseñaba a ir más rápido: visto desde el inicio del 1-1 el descuento lo deja en un 18 %
 # (0,995^336), PPO reparte el mérito hacia atrás con (0,995·0,95)^pasos (0,4 % a 100 pasos de la meta) y la IA no
 # ve en pantalla el tiempo exacto que lleva, así que ese bonus le llegaba como ruido. Cobrado paso a paso, cada paso
 # perdido cuesta al momento y en cualquier punto del nivel: -0,2 por paso ≈ 3 puntos por segundo.
-# Llegar sigue compensando siempre: terminar el 1-1 en ~22 s da ~+14 en total; morir aposta al principio, ~-16
+# Llegar sigue compensando siempre: terminar el 1-1 en ~22 s da ~+78 en total; morir aposta al principio, ~-8
 REWARD_PASO = -0.2            # cada paso cuesta: cuanto antes llegue, mejor
 REWARD_META = 50.0            # nivel completado...
 REWARD_META_RAPIDEZ = 0.0     # ...más hasta esto según lo rápido (lineal hasta FRAMES_REFERENCIA); ya va en REWARD_PASO
